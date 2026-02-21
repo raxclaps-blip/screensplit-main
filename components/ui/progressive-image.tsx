@@ -27,6 +27,7 @@ export function ProgressiveImage({
 }: ProgressiveImageProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export function ProgressiveImage({
 
     setIsLoading(true)
     setHasError(false)
+    setDimensions(null)
 
     // Preload the image
     const img = new window.Image()
@@ -47,6 +49,9 @@ export function ProgressiveImage({
     }
 
     img.onload = () => {
+      const width = Math.max(img.naturalWidth || 0, 1)
+      const height = Math.max(img.naturalHeight || 0, 1)
+      setDimensions({ width, height })
       setImageSrc(src)
       setIsLoading(false)
       onLoad?.()
@@ -92,10 +97,12 @@ export function ProgressiveImage({
       )}
 
       {/* Actual image */}
-      {imageSrc && (
+      {imageSrc && dimensions && (
         <Image
           src={imageSrc}
           alt={alt}
+          width={dimensions.width}
+          height={dimensions.height}
           className={cn(
             "w-full h-auto object-contain transition-opacity duration-500",
             isLoading ? "opacity-0" : "opacity-100",

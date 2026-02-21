@@ -21,6 +21,14 @@ const navigation = [
   { name: "Image Tools", href: "/apps/image-tools", icon: Wand2 },
 ]
 
+const iconAccentByRoute: Record<string, string> = {
+  "/apps/screensplit": "text-blue-500 dark:text-blue-400",
+  "/apps/videosplit": "text-rose-500 dark:text-rose-400",
+  "/apps/designer": "text-violet-500 dark:text-violet-400",
+  "/apps/gallery": "text-emerald-500 dark:text-emerald-400",
+  "/apps/image-tools": "text-amber-500 dark:text-amber-400",
+}
+
 const pageMeta: Array<{ path: string; title: string; subtitle: string }> = [
   { path: "/apps/screensplit", title: "Screensplit", subtitle: "Create before and after visual comparisons" },
   { path: "/apps/videosplit", title: "Videosplit", subtitle: "Build side-by-side video comparisons" },
@@ -135,13 +143,27 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                   onClick={() => setSidebarOpen(false)}
                   onMouseEnter={() => router.prefetch(item.href)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
+                    "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
                       ? "bg-muted text-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                   )}
                 >
-                  <Icon className="h-5 w-5 shrink-0" />
+                  <span
+                    className={cn(
+                      "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border transition-colors",
+                      isActive
+                        ? "border-border/70 bg-background/80"
+                        : "border-transparent bg-muted/40 group-hover:bg-muted",
+                    )}
+                  >
+                    <Icon
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        iconAccentByRoute[item.href] || "text-sky-500 dark:text-sky-400",
+                      )}
+                    />
+                  </span>
                   {item.name}
                 </Link>
               )
@@ -156,10 +178,12 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
             <Link
               href="/apps/support"
               onMouseEnter={() => router.prefetch("/apps/support")}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+              className="group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
               onClick={() => setSidebarOpen(false)}
             >
-              <HelpCircle className="h-5 w-5" />
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/40 transition-colors group-hover:bg-muted">
+                <HelpCircle className="h-4 w-4 text-cyan-500 dark:text-cyan-400" />
+              </span>
               Support
             </Link>
             {session?.user && (
@@ -192,9 +216,11 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                 toast("Signing out...")
                 signOut({ callbackUrl: "/" })
               }}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground w-full text-left"
+              className="group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
             >
-              <LogOut className="h-5 w-5" />
+              <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted/40 transition-colors group-hover:bg-muted">
+                <LogOut className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+              </span>
               Log out
             </button>
           </div>

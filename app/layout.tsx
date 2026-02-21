@@ -4,8 +4,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/toaster"
-import { Toaster as SonnerToaster } from "sonner"
+import { Toaster as SonnerToaster } from "@/components/ui/sonner"
 import AuthProvider from "@/components/providers/session-provider"
 
 const geistSans = Geist({
@@ -102,8 +101,27 @@ export default function RootLayout({
         <AuthProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
             <Suspense fallback={null}>{children}</Suspense>
-            <Toaster />
-            <SonnerToaster richColors position="top-center" />
+            <SonnerToaster
+              richColors
+              position="bottom-right"
+              expand={false}
+              visibleToasts={3}
+              duration={1800}
+              gap={8}
+              offset={{ right: 16, bottom: 16 }}
+              mobileOffset={{ left: 12, right: 12, bottom: 12 }}
+              toastOptions={{
+                classNames: {
+                  toast:
+                    "w-[min(92vw,360px)] min-h-0 rounded-xl border border-border/70 bg-background/95 px-3 py-2.5 shadow-lg backdrop-blur-sm",
+                  title: "text-[13px] font-medium leading-tight",
+                  description: "text-[12px] leading-snug text-muted-foreground",
+                  actionButton: "h-7 rounded-md px-2 text-[12px]",
+                  cancelButton: "h-7 rounded-md px-2 text-[12px]",
+                  closeButton: "h-6 w-6",
+                },
+              }}
+            />
           </ThemeProvider>
         </AuthProvider>
       </body>
