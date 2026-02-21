@@ -5,15 +5,15 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Navbar } from "@/components/common/Navbar"
 import { Footer } from "@/components/common/Footer"
-import AuthProvider from "@/components/providers/session-provider"
+import { cacheLife } from "next/cache"
 
 export default async function ContactPage() {
   "use cache"
+  cacheLife("max")
 
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-background font-sans antialiased">
-        <Navbar />
+    <div className="min-h-screen bg-background font-sans antialiased">
+      <Navbar />
 
       {/* Hero Section */}
       <section className="border-b border-border">
@@ -192,8 +192,7 @@ export default async function ContactPage() {
         </div>
       </section>
 
-        <Footer />
-      </div>
-    </AuthProvider>
+      <Footer />
+    </div>
   )
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react"
+import Link from "next/link"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -380,7 +381,7 @@ export default function GalleryPage() {
         <h1 className="text-2xl sm:text-3xl font-bold mb-2">Sign in to view your gallery</h1>
         <p className="text-muted-foreground mb-6">Your saved comparisons and shared images will appear here after you sign in.</p>
         <Button asChild size="lg" className="rounded-full">
-          <a href="/auth/signin">Sign in</a>
+          <Link href="/auth/signin">Sign in</Link>
         </Button>
       </div>
     )
@@ -421,7 +422,7 @@ export default function GalleryPage() {
                 Create your first before/after comparison to get started
               </p>
               <Button asChild>
-                <a href="/apps/screensplit">Create Comparison</a>
+                <Link href="/apps/screensplit">Create Comparison</Link>
               </Button>
             </div>
           ) : (
@@ -453,7 +454,7 @@ export default function GalleryPage() {
                 Share your comparisons to make them appear here
               </p>
               <Button asChild>
-                <a href="/apps/screensplit">Create & Share</a>
+                <Link href="/apps/screensplit">Create & Share</Link>
               </Button>
             </div>
           ) : (

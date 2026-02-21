@@ -1,7 +1,5 @@
 import { ImageResponse } from 'next/og'
  
-export const runtime = 'edge'
- 
 export const alt = 'Screensplit - Create Stunning Before & After Images'
 export const size = {
   width: 1200,
@@ -10,7 +8,7 @@ export const size = {
  
 export const contentType = 'image/png'
  
-export default async function Image() {
+export default function Image() {
   return new ImageResponse(
     (
       <div

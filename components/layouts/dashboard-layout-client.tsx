@@ -2,17 +2,16 @@
 
 import type React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { LayoutGrid, HelpCircle, Wand2, Menu, X, LogOut, Images, Film, Palette } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
-import { signOut } from "next-auth/react"
+import { useEffect, useState } from "react"
+import { signOut, useSession } from "next-auth/react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "sonner"
 import Logo from "@/components/common/Logo"
-import type { Session } from "next-auth"
 
 const navigation = [
   { name: "Screensplit", href: "/apps/screensplit", icon: LayoutGrid },
@@ -50,13 +49,10 @@ function getPageInfo(pathname: string) {
   }
 }
 
-interface DashboardLayoutClientProps {
-  children: React.ReactNode
-  session: Session
-}
-
-export function DashboardLayoutClient({ children, session }: DashboardLayoutClientProps) {
+export function DashboardLayoutClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { data: session, status } = useSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const currentPage = getPageInfo(pathname)
   const initials =
@@ -65,6 +61,42 @@ export function DashboardLayoutClient({ children, session }: DashboardLayoutClie
       .map((part) => part[0])
       .join("")
       .toUpperCase() || "U"
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      const callbackUrl = encodeURIComponent(pathname || "/apps")
+      router.replace(`/auth/signin?callbackUrl=${callbackUrl}`)
+    }
+  }, [pathname, router, status])
+
+  useEffect(() => {
+    const routesToPrefetch = [
+      "/",
+      ...navigation.map((item) => item.href),
+      "/apps/support",
+      "/apps/settings",
+    ]
+
+    const timer = window.setTimeout(() => {
+      routesToPrefetch.forEach((route) => router.prefetch(route))
+    }, 120)
+
+    return () => window.clearTimeout(timer)
+  }, [router])
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-background font-sans antialiased">
+        <div className="flex h-screen items-center justify-center text-sm text-muted-foreground">
+          Loading your workspace...
+        </div>
+      </div>
+    )
+  }
+
+  if (status === "unauthenticated") {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-background font-sans antialiased">
@@ -101,6 +133,7 @@ export function DashboardLayoutClient({ children, session }: DashboardLayoutClie
                   key={item.name}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
+                  onMouseEnter={() => router.prefetch(item.href)}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all",
                     isActive
@@ -122,6 +155,7 @@ export function DashboardLayoutClient({ children, session }: DashboardLayoutClie
             </div>
             <Link
               href="/apps/support"
+              onMouseEnter={() => router.prefetch("/apps/support")}
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
               onClick={() => setSidebarOpen(false)}
             >
@@ -132,6 +166,7 @@ export function DashboardLayoutClient({ children, session }: DashboardLayoutClie
               <Link
                 href="/apps/settings"
                 onClick={() => setSidebarOpen(false)}
+                onMouseEnter={() => router.prefetch("/apps/settings")}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   pathname === "/apps/settings"

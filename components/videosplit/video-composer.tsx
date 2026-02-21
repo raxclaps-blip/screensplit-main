@@ -27,6 +27,17 @@ function mediaRecorderMp4Mime(): string | null {
   return null
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 200)
+}
+
 async function getFFmpeg(): Promise<FFmpeg> {
   if (!__ffmpeg__) {
     __ffmpeg__ = new FFmpeg()
@@ -58,16 +69,6 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
   const targetW = 1080
   const targetH = 1920
 
-  // Helpers
-  const hexToRgba = useCallback((hex: string, alpha: number) => {
-    const h = hex.replace('#', '')
-    const bigint = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16)
-    const r = (bigint >> 16) & 255
-    const g = (bigint >> 8) & 255
-    const b = bigint & 255
-    return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`
-  }, [])
-
   const applyShapePath = useCallback((ctx: CanvasRenderingContext2D, w: number, h: number, shape: VideoControlsState['bgShape']) => {
     ctx.beginPath()
     if (shape === 'rounded' || shape === 'pill') {
@@ -97,79 +98,6 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
       ctx.closePath()
     }
   }, [])
-
-  const drawLabel = useCallback((
-    ctx: CanvasRenderingContext2D,
-    label: string,
-    subtext: string,
-    pos: TextPosition,
-    fontSize: number,
-    textColor: string,
-    textBgColor: string,
-  ) => {
-    const hasSubtext = subtext.trim().length > 0
-    const subSize = Math.round(fontSize * 0.5)
-    const lineSpacing = Math.round(fontSize * 0.3)
-
-    ctx.font = `bold ${fontSize}px sans-serif`
-    const mainMetrics = ctx.measureText(label)
-    const mainW = mainMetrics.width
-
-    let subW = 0
-    if (hasSubtext) {
-      ctx.font = `${subSize}px sans-serif`
-      subW = ctx.measureText(subtext).width
-    }
-
-    const maxW = Math.max(mainW, subW)
-    const padding = Math.round(fontSize * 0.4)
-    const bgW = maxW + padding * 2
-    const totalH = hasSubtext ? fontSize + lineSpacing + subSize : fontSize
-    const bgH = totalH + padding * 1.5
-
-    let x = 0, y = 0
-    // horizontal
-    if (pos.includes("left")) x = 20
-    else if (pos.includes("right")) x = targetW - bgW - 20
-    else x = (targetW - bgW) / 2
-    // vertical
-    if (pos.startsWith("top")) y = 20
-    else if (pos.startsWith("bottom")) y = targetH - bgH - 20
-    else y = (targetH - bgH) / 2
-
-    ctx.fillStyle = textBgColor
-    // rounded rect
-    const r = 10
-    if ((ctx as any).roundRect) {
-      ;(ctx as any).roundRect(x, y, bgW, bgH, r)
-      ctx.fill()
-    } else {
-      ctx.beginPath()
-      ctx.moveTo(x + r, y)
-      ctx.arcTo(x + bgW, y, x + bgW, y + r, r)
-      ctx.arcTo(x + bgW, y + bgH, x + bgW - r, y + bgH, r)
-      ctx.arcTo(x, y + bgH, x, y + bgH - r, r)
-      ctx.arcTo(x, y, x + r, y, r)
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillStyle = textColor
-    const centerX = x + bgW / 2
-    const centerY = y + bgH / 2
-    const mainY = hasSubtext ? centerY - (lineSpacing + subSize) / 2 : centerY
-    ctx.font = `bold ${fontSize}px sans-serif`
-    ctx.fillText(label, centerX, mainY)
-    if (hasSubtext) {
-      ctx.font = `${subSize}px sans-serif`
-      ctx.globalAlpha = 0.9
-      const subY = mainY + fontSize / 2 + lineSpacing + subSize / 2
-      ctx.fillText(subtext, centerX, subY)
-      ctx.globalAlpha = 1
-    }
-  }, [targetW, targetH])
 
   const drawFit = useCallback((ctx: CanvasRenderingContext2D, video: HTMLVideoElement) => {
     const scale = Math.min(targetW / video.videoWidth, targetH / video.videoHeight)
@@ -262,6 +190,8 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
 
     setIsComposing(true)
     const toastId = toast.loading("Composing vertical video...")
+    let ac: AudioContext | null = null
+    let stream: MediaStream | null = null
 
     try {
       await Promise.all([waitLoaded(before), waitLoaded(after)])
@@ -269,8 +199,8 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
       // Portrait output 1080x1920
       canvas.width = targetW
       canvas.height = targetH
-      const ctx = canvas.getContext("2d")!
-      
+      const ctx = canvas.getContext("2d")
+
       if (!ctx) {
         throw new Error("Failed to get canvas context")
       }
@@ -289,25 +219,55 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
         throw new Error("Failed to capture canvas stream")
       }
       
-      let stream: MediaStream
-      let ac: AudioContext | null = null
+      let audioCtl:
+        | {
+            enableAfterAudio: () => void
+            disableBeforeAudio: () => void
+            beforeGain: GainNode
+            afterGain: GainNode
+            context: AudioContext
+          }
+        | null = null
+
       if (controls.includeAudio) {
-        before.muted = false
-        after.muted = false
-        ac = new (window.AudioContext || (window as any).webkitAudioContext)()
-        const dest = ac.createMediaStreamDestination()
-        const beforeSource = ac.createMediaElementSource(before)
-        const afterSource = ac.createMediaElementSource(after)
-        const beforeGain = ac.createGain(); beforeGain.gain.value = 1
-        const afterGain = ac.createGain(); afterGain.gain.value = 0
-        beforeSource.connect(beforeGain).connect(dest)
-        afterSource.connect(afterGain).connect(dest)
-        // Helper to swap gains when switching clips
-        const enableAfterAudio = () => { afterGain.gain.setValueAtTime(1, ac!.currentTime) }
-        const disableBeforeAudio = () => { beforeGain.gain.setValueAtTime(0, ac!.currentTime) }
-        ;(before as any)._audioCtl = { enableAfterAudio, disableBeforeAudio, beforeGain, afterGain, context: ac }
-        const audioTracks = dest.stream.getAudioTracks()
-        stream = new MediaStream([canvasStream.getVideoTracks()[0], ...(audioTracks.length > 0 ? audioTracks : [])])
+        try {
+          before.muted = false
+          after.muted = false
+          ac = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const dest = ac.createMediaStreamDestination()
+          const beforeSource = ac.createMediaElementSource(before)
+          const afterSource = ac.createMediaElementSource(after)
+          const beforeGain = ac.createGain()
+          const afterGain = ac.createGain()
+          beforeGain.gain.value = 1
+          afterGain.gain.value = 0
+          beforeSource.connect(beforeGain).connect(dest)
+          afterSource.connect(afterGain).connect(dest)
+
+          audioCtl = {
+            enableAfterAudio: () => {
+              afterGain.gain.setValueAtTime(1, ac!.currentTime)
+            },
+            disableBeforeAudio: () => {
+              beforeGain.gain.setValueAtTime(0, ac!.currentTime)
+            },
+            beforeGain,
+            afterGain,
+            context: ac,
+          }
+
+          const audioTracks = dest.stream.getAudioTracks()
+          stream = new MediaStream([canvasStream.getVideoTracks()[0], ...(audioTracks.length > 0 ? audioTracks : [])])
+        } catch (audioError) {
+          console.warn("Audio setup failed, exporting without audio:", audioError)
+          before.muted = true
+          after.muted = true
+          stream = canvasStream
+          toast.warning("Audio disabled", {
+            description: "Could not attach audio in this browser session. Exporting video-only.",
+            id: toastId,
+          })
+        }
       } else {
         before.muted = true
         after.muted = true
@@ -430,34 +390,62 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
         ctx.restore()
       }
 
-      let anim: number
+      let anim = 0
       const frameInterval = 1000 / REC_FPS
       let lastTs = 0
-      const loop = (video: HTMLVideoElement, label: string, subtext: string, onStart?: () => void): Promise<void> =>
-        new Promise(async (resolve) => {
-          const onEnded = () => {
+      const loop = (
+        video: HTMLVideoElement,
+        overlay: { image: HTMLCanvasElement; x: number; y: number; w: number; h: number },
+        onStart?: () => void
+      ): Promise<void> =>
+        new Promise((resolve, reject) => {
+          const cleanup = () => {
             cancelAnimationFrame(anim)
             video.removeEventListener("ended", onEnded)
+          }
+
+          const onEnded = () => {
+            cleanup()
             resolve()
           }
-          video.addEventListener("ended", onEnded)
-          onStart && onStart()
-          await video.play()
+
           const step = (ts?: number) => {
-            const now = ts ?? performance.now()
-            if (now - lastTs >= frameInterval) {
-              lastTs = now
-              ctx.clearRect(0, 0, targetW, targetH)
-              drawFit(ctx, video)
-              const ov = label === controls.beforeText ? overlayBefore : overlayAfter
-              // draw background behind the text overlay
-              drawOverlayBG(ctx, ov)
-              // then draw the text image centered within the background canvas
-              ctx.drawImage(ov.image, ov.x, ov.y)
+            try {
+              const now = ts ?? performance.now()
+              if (now - lastTs >= frameInterval) {
+                lastTs = now
+                ctx.clearRect(0, 0, targetW, targetH)
+                drawFit(ctx, video)
+                drawOverlayBG(ctx, overlay)
+                ctx.drawImage(overlay.image, overlay.x, overlay.y)
+              }
+              anim = requestAnimationFrame(step)
+            } catch (err) {
+              cleanup()
+              reject(err instanceof Error ? err : new Error("Rendering failed"))
+            }
+          }
+
+          video.addEventListener("ended", onEnded, { once: true })
+          try {
+            onStart?.()
+            const playPromise = video.play()
+            if (playPromise && typeof playPromise.then === "function") {
+              playPromise
+                .then(() => {
+                  anim = requestAnimationFrame(step)
+                })
+                .catch((err) => {
+                  cleanup()
+                  reject(err instanceof Error ? err : new Error("Playback failed"))
+                })
+              return
             }
             anim = requestAnimationFrame(step)
+          } catch (err) {
+            cleanup()
+            reject(err instanceof Error ? err : new Error("Playback failed"))
           }
-          anim = requestAnimationFrame(step)
         })
 
       recorder.start()
@@ -469,7 +457,7 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
       const firstOverlay = firstIsBefore ? overlayBefore : overlayAfter
       const secondOverlay = firstIsBefore ? overlayAfter : overlayBefore
 
-      await loop(firstV, firstIsBefore ? controls.beforeText : controls.afterText, firstIsBefore ? controls.beforeSubtext : controls.afterSubtext)
+      await loop(firstV, firstOverlay)
       // Optional fade-through-black and audio crossfade
       if (controls.enableFade && controls.fadeSeconds > 0) {
         const frames = Math.max(1, Math.round(controls.fadeSeconds * 30))
@@ -484,36 +472,38 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
           ctx.fillRect(0, 0, targetW, targetH)
           await new Promise((r) => requestAnimationFrame(() => r(null)))
         }
-        if ((before as any)._audioCtl) {
-          const now = (before as any)._audioCtl.context?.currentTime || 0
+        if (audioCtl) {
+          const now = audioCtl.context?.currentTime || 0
           const fade = controls.fadeSeconds
           try {
-            ;(before as any)._audioCtl.beforeGain?.gain.cancelScheduledValues(now)
-            ;(before as any)._audioCtl.afterGain?.gain.cancelScheduledValues(now)
-            ;(before as any)._audioCtl.beforeGain?.gain.setValueAtTime((before as any)._audioCtl.beforeGain.gain.value, now)
-            ;(before as any)._audioCtl.afterGain?.gain.setValueAtTime((before as any)._audioCtl.afterGain.gain.value, now)
-            ;(before as any)._audioCtl.beforeGain?.gain.linearRampToValueAtTime(0, now + fade)
-            ;(before as any)._audioCtl.afterGain?.gain.linearRampToValueAtTime(1, now + fade)
+            audioCtl.beforeGain.gain.cancelScheduledValues(now)
+            audioCtl.afterGain.gain.cancelScheduledValues(now)
+            audioCtl.beforeGain.gain.setValueAtTime(audioCtl.beforeGain.gain.value, now)
+            audioCtl.afterGain.gain.setValueAtTime(audioCtl.afterGain.gain.value, now)
+            audioCtl.beforeGain.gain.linearRampToValueAtTime(0, now + fade)
+            audioCtl.afterGain.gain.linearRampToValueAtTime(1, now + fade)
           } catch {
-            ;(before as any)._audioCtl.disableBeforeAudio()
+            audioCtl.disableBeforeAudio()
           }
         }
-      } else if ((before as any)._audioCtl) {
-        ;(before as any)._audioCtl.disableBeforeAudio()
+      } else if (audioCtl) {
+        audioCtl.disableBeforeAudio()
       }
-      await loop(secondV, firstIsBefore ? controls.afterText : controls.beforeText, firstIsBefore ? controls.afterSubtext : controls.beforeSubtext, () => {
-        if ((before as any)._audioCtl) {
-          ;(before as any)._audioCtl.enableAfterAudio()
+      await loop(secondV, secondOverlay, () => {
+        if (audioCtl) {
+          audioCtl.enableAfterAudio()
         }
       })
-      
+
+      const stoppedBlob = new Promise<Blob>((resolve) => {
+        recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }))
+      })
+
       // Give a moment for last frames
       await new Promise(r => setTimeout(r, 200))
       recorder.stop()
 
-      const blob: Blob = await new Promise((resolve) => {
-        recorder.onstop = () => resolve(new Blob(chunks, { type: mimeType }))
-      })
+      const blob = await stoppedBlob
       
       if (!blob || blob.size === 0) {
         throw new Error("Recording failed: empty video")
@@ -521,17 +511,8 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
       
       // If we recorded MP4 natively, skip transcode
       if (usedMp4) {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `videosplit-portrait-${Date.now()}.mp4`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(url), 100)
+        downloadBlob(blob, `videosplit-portrait-${Date.now()}.mp4`)
         toast.success("MP4 download started!", { id: toastId })
-        // Cleanup audio context
-        if (ac) { try { ac.close() } catch {} }
         return
       }
 
@@ -557,30 +538,16 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
         const data = await ffmpeg.readFile("output.mp4") as Uint8Array
         const mp4Blob = new Blob([data.slice().buffer], { type: "video/mp4" })
         
-        const url = URL.createObjectURL(mp4Blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `videosplit-portrait-${Date.now()}.mp4`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        
-        setTimeout(() => URL.revokeObjectURL(url), 100)
+        downloadBlob(mp4Blob, `videosplit-portrait-${Date.now()}.mp4`)
         
         toast.success("MP4 download started!", { id: toastId })
       } catch (err: any) {
         console.error("Transcode error:", err)
-        toast.error("MP4 transcode failed", { 
-          description: err?.message || "Try shorter clips",
-          id: toastId 
+        downloadBlob(blob, `videosplit-portrait-${Date.now()}.webm`)
+        toast.warning("Downloaded WebM fallback", {
+          description: "MP4 transcode failed in this browser session.",
+          id: toastId,
         })
-      }
-      
-      // Cleanup audio context
-      if (ac) {
-        try {
-          ac.close()
-        } catch {}
       }
     } catch (e: any) {
       console.error(e)
@@ -589,9 +556,21 @@ export function VideoComposer({ beforeSrc, afterSrc, onBack, controls, onControl
         id: toastId 
       })
     } finally {
+      if (stream) {
+        for (const track of stream.getTracks()) {
+          track.stop()
+        }
+      }
+      if (ac) {
+        try {
+          await ac.close()
+        } catch {}
+      }
+      before.muted = true
+      after.muted = true
       setIsComposing(false)
     }
-  }, [controls, targetW, targetH, drawLabel, drawFit])
+  }, [controls, targetW, targetH, drawFit, applyShapePath])
 
   // Preload ffmpeg (once) in the background if native MP4 is not supported
   useEffect(() => {

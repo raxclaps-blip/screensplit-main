@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FileText, Scale, Shield } from "lucide-react";
 import { Navbar } from "@/components/common/Navbar";
 import { Footer } from "@/components/common/Footer";
-import AuthProvider from "@/components/providers/session-provider";
+import { cacheLife } from "next/cache";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -24,11 +24,11 @@ export const metadata: Metadata = {
 
 export default async function TermsPage() {
   "use cache"
+  cacheLife("max")
 
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-background font-sans antialiased">
-        <Navbar />
+    <div className="min-h-screen bg-background font-sans antialiased">
+      <Navbar />
 
         {/* Hero */}
         <section className="border-b border-border">
@@ -218,8 +218,7 @@ export default async function TermsPage() {
           </div>
         </section>
 
-        <Footer />
-      </div>
-    </AuthProvider>
+      <Footer />
+    </div>
   );
 }

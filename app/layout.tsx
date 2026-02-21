@@ -24,6 +24,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://screensplit.vercel.app'),
+  alternates: {
+    canonical: "/",
+  },
   title: {
     default: "Screensplit - Create Stunning Before & After Images",
     template: "%s | Screensplit"
@@ -58,16 +61,10 @@ export const metadata: Metadata = {
     description: 'Upload, customize, and export beautifully combined before & after visuals in seconds.',
     images: [
       {
-        url: '/logo.svg',
+        url: '/opengraph-image',
         width: 1200,
         height: 630,
-        alt: 'Screensplit Logo',
-      },
-      {
-        url: '/app-preview-lightmode.png',
-        width: 1200,
-        height: 630,
-        alt: 'Screensplit App Preview',
+        alt: 'Screensplit Open Graph Image',
       },
     ],
   },
@@ -75,7 +72,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Screensplit - Create Stunning Before & After Images',
     description: 'Upload, customize, and export beautifully combined before & after visuals in seconds.',
-    images: ['/logo.svg'],
+    images: ['/twitter-image'],
     creator: '@screensplit',
   },
   robots: {
@@ -102,15 +99,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
       <body>
-        <Suspense>
-          <AuthProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-              {children}
-              <Toaster />
-              <SonnerToaster richColors position="top-center" />
-            </ThemeProvider>
-          </AuthProvider>
-        </Suspense>
+        <AuthProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <Suspense fallback={null}>{children}</Suspense>
+            <Toaster />
+            <SonnerToaster richColors position="top-center" />
+          </ThemeProvider>
+        </AuthProvider>
       </body>
     </html>
   )

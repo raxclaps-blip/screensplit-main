@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,6 +20,7 @@ interface SignUpFormProps {
 }
 
 export function SignUpForm({ googleEnabled = false, githubEnabled = false }: SignUpFormProps) {
+  const { status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState("")
@@ -30,6 +31,12 @@ export function SignUpForm({ googleEnabled = false, githubEnabled = false }: Sig
   const [resendMessage, setResendMessage] = useState("")
   const router = useRouter()
   const hasOAuthProviders = googleEnabled || githubEnabled
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/apps/screensplit")
+    }
+  }, [router, status])
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -3,15 +3,15 @@ import { Home, ArrowLeft, Search, Compass, Image, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/common/Navbar"
 import { Footer } from "@/components/common/Footer"
-import AuthProvider from "@/components/providers/session-provider"
+import { cacheLife } from "next/cache"
 
 export default async function NotFoundPage() {
   "use cache"
+  cacheLife("max")
 
   return (
-    <AuthProvider>
-      <div className="min-h-screen bg-background font-sans antialiased">
-        <Navbar />
+    <div className="min-h-screen bg-background font-sans antialiased">
+      <Navbar />
 
         {/* Hero Section */}
         <section className="mx-auto max-w-7xl px-6 py-24 md:py-32 border-l border-r border-border">
@@ -195,8 +195,7 @@ export default async function NotFoundPage() {
           </div>
         </section>
 
-        <Footer />
-      </div>
-    </AuthProvider>
+      <Footer />
+    </div>
   )
 }

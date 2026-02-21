@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { ArrowRight } from "lucide-react"
 import { toast } from "sonner"
@@ -12,6 +12,8 @@ export default function VideosplitPage() {
   const [beforeVideo, setBeforeVideo] = useState<string | null>(null)
   const [afterVideo, setAfterVideo] = useState<string | null>(null)
   const [showComposer, setShowComposer] = useState(false)
+  const beforeVideoRef = useRef<string | null>(null)
+  const afterVideoRef = useRef<string | null>(null)
   const [controls, setControls] = useState<VideoControlsState>({
     // Layout Direction
     direction: "horizontal",
@@ -62,6 +64,35 @@ export default function VideosplitPage() {
     includeAudio: true,
   })
 
+  const setBeforeVideoUrl = (next: string | null) => {
+    const prev = beforeVideoRef.current
+    if (prev?.startsWith("blob:")) {
+      URL.revokeObjectURL(prev)
+    }
+    beforeVideoRef.current = next
+    setBeforeVideo(next)
+  }
+
+  const setAfterVideoUrl = (next: string | null) => {
+    const prev = afterVideoRef.current
+    if (prev?.startsWith("blob:")) {
+      URL.revokeObjectURL(prev)
+    }
+    afterVideoRef.current = next
+    setAfterVideo(next)
+  }
+
+  useEffect(() => {
+    return () => {
+      if (beforeVideoRef.current?.startsWith("blob:")) {
+        URL.revokeObjectURL(beforeVideoRef.current)
+      }
+      if (afterVideoRef.current?.startsWith("blob:")) {
+        URL.revokeObjectURL(afterVideoRef.current)
+      }
+    }
+  }, [])
+
   const handleContinue = () => {
     if (beforeVideo && afterVideo) {
       toast("Opening composer...", { description: "Combine and export your comparison video" })
@@ -88,11 +119,11 @@ export default function VideosplitPage() {
               label="Before"
               video={beforeVideo}
               onVideoChange={(src) => {
-                setBeforeVideo(src)
+                setBeforeVideoUrl(src)
                 toast.success("Before video added")
               }}
               onRemove={() => {
-                setBeforeVideo(null)
+                setBeforeVideoUrl(null)
                 toast("Removed", { description: "Before video removed" })
               }}
             />
@@ -100,11 +131,11 @@ export default function VideosplitPage() {
               label="After"
               video={afterVideo}
               onVideoChange={(src) => {
-                setAfterVideo(src)
+                setAfterVideoUrl(src)
                 toast.success("After video added")
               }}
               onRemove={() => {
-                setAfterVideo(null)
+                setAfterVideoUrl(null)
                 toast("Removed", { description: "After video removed" })
               }}
             />

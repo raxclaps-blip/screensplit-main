@@ -18,18 +18,23 @@ export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUp
   const inputRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (file: File) => {
+    if (!file.type.startsWith("video/")) {
+      toast.error("Unsupported file", { description: "Please upload a valid video file." })
+      return
+    }
+
     const url = URL.createObjectURL(file)
     const v = document.createElement("video")
     v.preload = "metadata"
     v.src = url
     v.onloadedmetadata = () => {
       const isPortrait = v.videoHeight > v.videoWidth
-      if (!isPortrait) {
-        URL.revokeObjectURL(url)
-        toast.error("Only portrait videos are accepted", { description: "Please upload a vertical video (e.g., 1080x1920)" })
-        return
-      }
       onVideoChange(url)
+      if (!isPortrait) {
+        toast("Landscape video detected", {
+          description: "It will still work, but portrait clips are recommended for best results.",
+        })
+      }
     }
     v.onerror = () => {
       URL.revokeObjectURL(url)
@@ -39,15 +44,16 @@ export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUp
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file && file.type.startsWith("video/")) {
+    if (file) {
       handleFile(file)
     }
+    e.currentTarget.value = ""
   }
 
   const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault()
     const file = e.dataTransfer.files?.[0]
-    if (file && file.type.startsWith("video/")) {
+    if (file) {
       handleFile(file)
     }
   }
@@ -70,7 +76,7 @@ export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUp
           <Input
             ref={inputRef}
             type="file"
-            accept="video/*"
+            accept="video/mp4,video/webm,video/quicktime,video/*"
             onChange={onChange}
             className="hidden"
           />

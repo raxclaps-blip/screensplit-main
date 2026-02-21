@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { UserNav } from "@/components/auth/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Logo from "./Logo";
@@ -15,6 +16,7 @@ const menuItems = [
 ];
 
 export const Navbar = () => {
+  const router = useRouter();
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const { data: session, status } = useSession();
@@ -27,6 +29,19 @@ export const Navbar = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  React.useEffect(() => {
+    const commonRoutes = ["/", "/about", "/contact", "/auth/signin", "/auth/signup"];
+    const authedRoutes = ["/apps/screensplit", "/apps/gallery", "/apps/settings"];
+    const routesToPrefetch = isAuthenticated ? [...commonRoutes, ...authedRoutes] : commonRoutes;
+
+    const timer = window.setTimeout(() => {
+      routesToPrefetch.forEach((route) => router.prefetch(route));
+    }, 180);
+
+    return () => window.clearTimeout(timer);
+  }, [isAuthenticated, router]);
+
   return (
     <header>
       <nav
@@ -66,6 +81,7 @@ export const Navbar = () => {
                   <li key={index}>
                     <Link
                       href={item.href}
+                      onMouseEnter={() => router.prefetch(item.href)}
                       className="text-muted-foreground hover:text-accent-foreground block duration-150"
                     >
                       <span>{item.name}</span>
@@ -82,6 +98,7 @@ export const Navbar = () => {
                     <li key={index}>
                       <Link
                         href={item.href}
+                        onMouseEnter={() => router.prefetch(item.href)}
                         className="text-muted-foreground hover:text-accent-foreground block duration-150"
                       >
                         <span>{item.name}</span>

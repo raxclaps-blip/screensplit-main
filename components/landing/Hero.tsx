@@ -45,7 +45,7 @@ export default function HeroSection() {
                             }}
                             className="mask-b-from-35% mask-b-to-90% absolute inset-0 top-56 -z-20 lg:top-32">
                             <Image
-                                src="/app-preview-darkmode.png"
+                                src="/app-preview-darkmode.avif"
                                 alt="app preview dark mode"
                                 className="hidden size-full dark:block"
                                 width="1024"
@@ -53,7 +53,7 @@ export default function HeroSection() {
                                 priority
                             />
                             <Image
-                                src="/app-preview-lightmode.png"
+                                src="/app-preview-lightmode.avif"
                                 alt="app preview light mode"
                                 className="size-full dark:hidden"
                                 width="1024"

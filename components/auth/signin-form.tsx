@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { signIn } from "next-auth/react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { signIn, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -83,6 +84,9 @@ export function SignInForm({
   googleEnabled = false,
   githubEnabled = false,
 }: SignInFormProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState("")
@@ -92,6 +96,11 @@ export function SignInForm({
   const [lastUsedAt, setLastUsedAt] = useState<number | null>(null)
   const [savedEmail, setSavedEmail] = useState("")
   const [hasHydratedStorage, setHasHydratedStorage] = useState(false)
+
+  const resolvedCallbackUrl = useMemo(() => {
+    const rawCallbackUrl = searchParams.get("callbackUrl") || callbackUrl
+    return rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/apps/screensplit"
+  }, [callbackUrl, searchParams])
 
   useEffect(() => {
     const savedRememberMe = getStorageItem(STORAGE_KEYS.rememberMe) === "1"
@@ -110,6 +119,12 @@ export function SignInForm({
     setLastUsedAt(Number.isFinite(savedLastUsedAt) ? savedLastUsedAt : null)
     setHasHydratedStorage(true)
   }, [])
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace(resolvedCallbackUrl)
+    }
+  }, [resolvedCallbackUrl, router, status])
 
   const lastUsedMessage = useMemo(() => {
     if (!lastUsedMethod) return ""
@@ -161,7 +176,7 @@ export function SignInForm({
         password,
         remember: rememberMe ? "true" : "false",
         redirect: false,
-        callbackUrl,
+        callbackUrl: resolvedCallbackUrl,
       })
 
       if (result?.error) {
@@ -174,8 +189,8 @@ export function SignInForm({
         persistRememberPreferences(rememberMe, normalizedEmail)
         persistLastUsed("credentials")
         toast.success("Signed in successfully")
-        // Use window.location for full page reload to ensure session is properly loaded
-        window.location.href = callbackUrl
+        router.replace(resolvedCallbackUrl)
+        router.refresh()
       }
     } catch (error) {
       console.error("Login error:", error)
@@ -194,7 +209,7 @@ export function SignInForm({
       const providerLabel = provider === "google" ? "Google" : "GitHub"
       toast(`Redirecting to ${providerLabel}...`)
       persistLastUsed(provider)
-      await signIn(provider, { callbackUrl })
+      await signIn(provider, { callbackUrl: resolvedCallbackUrl })
     } catch {
       const providerLabel = provider === "google" ? "Google" : "GitHub"
       setError(`Failed to sign in with ${providerLabel}`)
