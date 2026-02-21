@@ -51,7 +51,7 @@ export async function GET(
       key = pathParts.slice(2).join('/') || pathParts[pathParts.length - 1]
     }
     
-    // Fetch image from R2
+    // Fetch image from cloud storage
     const response = await getFromR2(key)
 
     if (!response.Body) {

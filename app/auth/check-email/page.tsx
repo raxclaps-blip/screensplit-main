@@ -120,15 +120,7 @@ function CheckEmailContent() {
 
 export default function CheckEmailPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-[80vh] w-full flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg">
-          <CardHeader className="space-y-2 text-center">
-            <CardTitle className="text-2xl">Loading...</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-    }>
+    <Suspense fallback={null}>
       <CheckEmailContent />
     </Suspense>
   )

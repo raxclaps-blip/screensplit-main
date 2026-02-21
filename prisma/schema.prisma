@@ -117,7 +117,7 @@ model Project {
   // Image data
   beforeImage String   // URL or base64 data
   afterImage  String   // URL or base64 data
-  finalImageUrl String? // R2 object key for final combined image
+  finalImageUrl String? // cloud object key for final combined image
   
   // Layout and styling options
   layout      ProjectLayout @default(SIDE_BY_SIDE)
