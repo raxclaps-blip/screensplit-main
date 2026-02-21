@@ -12,9 +12,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link"
 import { toast } from "sonner"
 
-export function SignUpForm() {
+type OAuthProvider = "google" | "github"
+
+interface SignUpFormProps {
+  googleEnabled?: boolean
+  githubEnabled?: boolean
+}
+
+export function SignUpForm({ googleEnabled = false, githubEnabled = false }: SignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [devVerificationUrl, setDevVerificationUrl] = useState<string | null>(null)
@@ -22,6 +29,7 @@ export function SignUpForm() {
   const [resending, setResending] = useState(false)
   const [resendMessage, setResendMessage] = useState("")
   const router = useRouter()
+  const hasOAuthProviders = googleEnabled || githubEnabled
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -102,14 +110,21 @@ export function SignUpForm() {
     }
   }
 
-  async function signInWithGoogle() {
-    setIsGoogleLoading(true)
+  async function signInWithOAuth(provider: OAuthProvider) {
+    if ((provider === "google" && !googleEnabled) || (provider === "github" && !githubEnabled)) {
+      return
+    }
+    setOauthLoadingProvider(provider)
     try {
-      await signIn("google", { callbackUrl: "/apps/screensplit" })
-    } catch (error) {
-      setError("Failed to sign in with Google")
+      const providerLabel = provider === "google" ? "Google" : "GitHub"
+      toast(`Redirecting to ${providerLabel}...`)
+      await signIn(provider, { callbackUrl: "/apps/screensplit" })
+    } catch {
+      const providerLabel = provider === "google" ? "Google" : "GitHub"
+      setError(`Failed to sign in with ${providerLabel}`)
+      toast.error(`Failed to sign in with ${providerLabel}`)
     } finally {
-      setIsGoogleLoading(false)
+      setOauthLoadingProvider(null)
     }
   }
 
@@ -140,14 +155,15 @@ export function SignUpForm() {
   }
 
   return (
-    <Card className="w-full border-border/60 bg-background/95 shadow-xl backdrop-blur-sm">
-      <CardHeader className="space-y-2 pb-3">
-        <CardTitle className="text-2xl">Create account</CardTitle>
+    <Card className="w-full overflow-hidden rounded-2xl border border-border/60 bg-background/92 shadow-[0_16px_50px_-34px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+      <div className="h-0.5 w-full bg-gradient-to-r from-orange-500/70 via-teal-400/65 to-sky-500/70" />
+      <CardHeader className="space-y-1 pb-2 pt-4">
+        <CardTitle className="text-xl tracking-tight">Create account</CardTitle>
         <CardDescription>
-          Enter your information to create your account.
+          Use email or OAuth.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 pb-4">
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -184,89 +200,121 @@ export function SignUpForm() {
           </>
         )}
 
-        <Button
-          variant="outline"
-          onClick={signInWithGoogle}
-          disabled={isGoogleLoading || isLoading}
-          className="w-full"
-        >
-          {isGoogleLoading ? (
-            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Icons.google className="mr-2 h-4 w-4" />
-          )}
-          Continue with Google
-        </Button>
+        {hasOAuthProviders && (
+          <>
+            <div className={`grid gap-2 ${googleEnabled && githubEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+              {googleEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => signInWithOAuth("google")}
+                  disabled={oauthLoadingProvider !== null || isLoading}
+                  className="h-10 w-full justify-start rounded-lg border-border/70 bg-background/70 px-3 text-sm font-medium hover:bg-muted/45"
+                >
+                  {oauthLoadingProvider === "google" ? (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Icons.google className="mr-2 h-4 w-4" />
+                  )}
+                  Google
+                </Button>
+              )}
+              {githubEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => signInWithOAuth("github")}
+                  disabled={oauthLoadingProvider !== null || isLoading}
+                  className="h-10 w-full justify-start rounded-lg border-border/70 bg-background/70 px-3 text-sm font-medium hover:bg-muted/45"
+                >
+                  {oauthLoadingProvider === "github" ? (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Icons.github className="mr-2 h-4 w-4" />
+                  )}
+                  GitHub
+                </Button>
+              )}
+            </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
-        </div>
+            <div className="relative py-0.5">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 tracking-[0.14em] text-muted-foreground">
+                  Email
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              name="name"
-              type="text"
-              placeholder="Enter your full name"
-              autoComplete="name"
-              required
-              disabled={isLoading}
-            />
+        <form onSubmit={onSubmit} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                placeholder="Your name"
+                autoComplete="name"
+                required
+                disabled={isLoading}
+                className="h-10 rounded-lg border-border/70 bg-background/70"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="name@example.com"
+                autoComplete="email"
+                required
+                disabled={isLoading}
+                className="h-10 rounded-lg border-border/70 bg-background/70"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="name@example.com"
-              autoComplete="email"
-              required
-              disabled={isLoading}
-            />
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Min 8 characters"
+                autoComplete="new-password"
+                required
+                disabled={isLoading}
+                minLength={8}
+                className="h-10 rounded-lg border-border/70 bg-background/70"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword">Confirm</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="Repeat password"
+                autoComplete="new-password"
+                required
+                disabled={isLoading}
+                minLength={8}
+                className="h-10 rounded-lg border-border/70 bg-background/70"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Create a password (min. 8 characters)"
-              autoComplete="new-password"
-              required
-              disabled={isLoading}
-              minLength={8}
-            />
-            <p className="text-xs text-muted-foreground">
-              Must be at least 8 characters long
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              autoComplete="new-password"
-              required
-              disabled={isLoading}
-              minLength={8}
-            />
-          </div>
+          <p className="text-xs text-muted-foreground">Password must be at least 8 characters.</p>
 
           <Button
             type="submit"
-            className="w-full"
+            className="h-10 w-full rounded-lg shadow-sm"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -280,7 +328,7 @@ export function SignUpForm() {
           </Button>
         </form>
 
-        <div className="pt-1 text-center text-sm">
+        <div className="pt-0.5 text-center text-sm">
           Already have an account?{" "}
           <Link
             href="/auth/signin"

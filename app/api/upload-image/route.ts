@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       imageDataUrl,
+      title,
       layout,
       beforeLabel,
       afterLabel,
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
     const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, "")
     const buffer = Buffer.from(base64Data, "base64")
 
-    // Generate unique filename and upload to R2
+    // Generate unique filename and upload to cloud storage
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
     const extension = exportFormat || "png"
@@ -88,7 +89,10 @@ export async function POST(req: NextRequest) {
     const project = await prisma.project.create({
       data: {
         userId: session.user.id,
-        title: `${beforeLabel} vs ${afterLabel}`,
+        title:
+          typeof title === "string" && title.trim().length > 0
+            ? title.trim().slice(0, 120)
+            : `${beforeLabel || "Before"} vs ${afterLabel || "After"}`,
         shareSlug,
         finalImageUrl: imageUrl,
         beforeImage: imageUrl, // Using the same image for now

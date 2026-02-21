@@ -1,6 +1,6 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3"
 
-// Initialize R2 client with credentials from environment
+// Initialize cloud storage client with credentials from environment
 const r2Client = new S3Client({
   region: process.env.R2_REGION || "auto",
   endpoint: process.env.R2_S3_ENDPOINT,
@@ -12,9 +12,9 @@ const r2Client = new S3Client({
 })
 
 /**
- * Upload a file to Cloudflare R2 storage
+ * Upload a file to cloud storage
  * @param buffer - The file buffer to upload
- * @param key - The key/path where the file will be stored in R2
+ * @param key - The key/path where the file will be stored in cloud storage
  * @param contentType - The MIME type of the file
  * @returns The public URL of the uploaded file
  */
@@ -26,7 +26,7 @@ export async function uploadToR2(
   const bucketName = process.env.R2_BUCKET
 
   if (!bucketName) {
-    throw new Error("R2_BUCKET environment variable is not set")
+    throw new Error("Cloud storage bucket environment variable is not set")
   }
 
   try {
@@ -40,13 +40,13 @@ export async function uploadToR2(
     await r2Client.send(command)
 
     // Construct the public URL
-    // Note: You may need to adjust this based on your R2 public URL configuration
+    // Note: You may need to adjust this based on your cloud storage public URL configuration
     const publicUrl = `${process.env.R2_S3_ENDPOINT}/${bucketName}/${key}`
 
     return publicUrl
   } catch (error) {
-    console.error("Error uploading to R2:", error)
-    throw new Error("Failed to upload file to R2 storage")
+    console.error("Error uploading to cloud storage:", error)
+    throw new Error("Failed to upload file to cloud storage")
   }
 }
 
@@ -62,15 +62,15 @@ export function generateImageKey(format: "png" | "jpeg"): string {
 }
 
 /**
- * Get an object from R2 storage
- * @param key - The key/path of the file in R2
+ * Get an object from cloud storage
+ * @param key - The key/path of the file in cloud storage
  * @returns The file stream and metadata
  */
 export async function getFromR2(key: string) {
   const bucketName = process.env.R2_BUCKET
 
   if (!bucketName) {
-    throw new Error("R2_BUCKET environment variable is not set")
+    throw new Error("Cloud storage bucket environment variable is not set")
   }
 
   try {
@@ -82,7 +82,7 @@ export async function getFromR2(key: string) {
     const response = await r2Client.send(command)
     return response
   } catch (error) {
-    console.error("Error fetching from R2:", error)
-    throw new Error("Failed to fetch file from R2 storage")
+    console.error("Error fetching from cloud storage:", error)
+    throw new Error("Failed to fetch file from cloud storage")
   }
 }

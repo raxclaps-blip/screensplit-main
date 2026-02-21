@@ -3,6 +3,7 @@ import NextAuth from "next-auth"
 import { CredentialsSignin } from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import GoogleProvider from "next-auth/providers/google"
+import GitHubProvider from "next-auth/providers/github"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcrypt"
 import { prisma } from "@/lib/prisma"
@@ -101,6 +102,14 @@ const config: NextAuthConfig = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+          }),
+        ]
+      : []),
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+      ? [
+          GitHubProvider({
+            clientId: process.env.GITHUB_CLIENT_ID!,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET!,
           }),
         ]
       : []),
@@ -212,7 +221,7 @@ const config: NextAuthConfig = {
   callbacks: {
     async signIn({ account }) {
       // Allow OAuth sign-ins without email verification
-      if (account?.provider === "google") {
+      if (account?.provider === "google" || account?.provider === "github") {
         return true
       }
       

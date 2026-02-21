@@ -152,8 +152,7 @@ export default async function PrivacyPage() {
                   </p>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
                     <li>
-                      Images are uploaded to secure cloud storage (Cloudflare
-                      R2)
+                      Images are uploaded to secure cloud storage
                     </li>
                     <li>Images are encrypted in transit and at rest</li>
                     <li>
@@ -298,9 +297,7 @@ export default async function PrivacyPage() {
                     </p>
                   </div>
                   <div className="rounded-lg border border-border bg-secondary/30 p-4">
-                    <h4 className="font-semibold mb-2">
-                      Cloudflare R2 (Storage)
-                    </h4>
+                    <h4 className="font-semibold mb-2">Cloud Storage</h4>
                     <p className="text-sm">
                       Stores your saved images if you create an account. Images
                       are encrypted and only accessible to you.

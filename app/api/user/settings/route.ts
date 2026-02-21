@@ -6,19 +6,26 @@ import { prisma } from "@/lib/prisma"
 export async function GET() {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+    const userId = session?.user?.id
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { id: userId },
       select: {
         id: true,
         name: true,
         email: true,
         image: true,
         createdAt: true,
+        password: true,
+        accounts: {
+          select: {
+            provider: true,
+          },
+        },
       },
     })
 
@@ -26,7 +33,26 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    return NextResponse.json({ user })
+    const providerSet = new Set<string>()
+    if (user.password) {
+      providerSet.add("credentials")
+    }
+    for (const account of user.accounts) {
+      if (account.provider) {
+        providerSet.add(account.provider)
+      }
+    }
+
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        createdAt: user.createdAt,
+      },
+      authProviders: Array.from(providerSet),
+    })
   } catch (error) {
     console.error("Error fetching user settings:", error)
     return NextResponse.json(
@@ -40,21 +66,50 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+    const userId = session?.user?.id
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     const body = await request.json()
     const { name, email } = body
+    const normalizedEmail = typeof email === "string" ? email.toLowerCase().trim() : ""
+
+    const userAuth = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        accounts: {
+          select: {
+            provider: true,
+          },
+        },
+      },
+    })
+
+    if (!userAuth) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
+
+    const isOAuthManagedProfile = userAuth.accounts.some(
+      (account) => account.provider === "google" || account.provider === "github"
+    )
+
+    if (isOAuthManagedProfile) {
+      return NextResponse.json(
+        { error: "Profile details are managed by your OAuth provider and cannot be edited here." },
+        { status: 403 }
+      )
+    }
 
     // Check if email is already taken by another user
-    if (email && email !== session.user.email) {
+    if (normalizedEmail) {
       const existingUser = await prisma.user.findUnique({
-        where: { email },
+        where: { email: normalizedEmail },
+        select: { id: true },
       })
 
-      if (existingUser) {
+      if (existingUser && existingUser.id !== userId) {
         return NextResponse.json(
           { error: "Email already in use" },
           { status: 400 }
@@ -63,10 +118,10 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { email: session.user.email },
+      where: { id: userId },
       data: {
-        name: name || undefined,
-        email: email || undefined,
+        name: typeof name === "string" ? name.trim() : undefined,
+        email: normalizedEmail || undefined,
       },
       select: {
         id: true,
@@ -90,14 +145,15 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE() {
   try {
     const session = await auth()
-    
-    if (!session?.user?.email) {
+    const userId = session?.user?.id
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
     // Delete user and all related data (cascade)
     await prisma.user.delete({
-      where: { email: session.user.email },
+      where: { id: userId },
     })
 
     return NextResponse.json({ success: true })

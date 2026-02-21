@@ -21,15 +21,32 @@ import {
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 
+type SettingsResponse = {
+  user?: {
+    createdAt?: string
+  }
+  authProviders?: string[]
+}
+
+function formatProviderName(provider: string) {
+  if (provider === "credentials") return "Email and Password"
+  if (provider === "google") return "Google"
+  if (provider === "github") return "GitHub"
+  if (!provider) return "Unknown"
+  return provider.charAt(0).toUpperCase() + provider.slice(1)
+}
+
 export default function SettingsPage() {
   const { data: session, update } = useSession()
-  const { theme, setTheme } = useTheme()
+  const { theme, resolvedTheme, setTheme } = useTheme()
   
   // User profile state
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
+  const [memberSince, setMemberSince] = useState<string>("")
+  const [authProviders, setAuthProviders] = useState<string[]>([])
   
   // Preferences state
   const [emailNotifications, setEmailNotifications] = useState(true)
@@ -57,6 +74,52 @@ export default function SettingsPage() {
       setEmail(session.user.email || "")
     }
   }, [session])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadAccountMetadata() {
+      try {
+        const response = await fetch("/api/user/settings", {
+          method: "GET",
+          cache: "no-store",
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const data = (await response.json()) as SettingsResponse
+        if (!isMounted) return
+
+        setMemberSince(data.user?.createdAt || "")
+        setAuthProviders(Array.isArray(data.authProviders) ? data.authProviders : [])
+      } catch {
+        // Keep profile page functional even when metadata fetch fails.
+      }
+    }
+
+    if (session?.user?.id) {
+      loadAccountMetadata()
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [session?.user?.id])
+
+  const authProviderLabel =
+    authProviders.length > 0
+      ? authProviders.map(formatProviderName).join(", ")
+      : "Unknown"
+  const isOAuthManagedProfile =
+    authProviders.includes("google") || authProviders.includes("github")
+  const memberSinceLabel = memberSince
+    ? new Date(memberSince).toLocaleDateString()
+    : session?.user?.createdAt
+      ? new Date(session.user.createdAt).toLocaleDateString()
+      : ""
+  const selectedTheme = theme === "system" ? (resolvedTheme ?? "light") : (theme ?? "light")
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -88,6 +151,11 @@ export default function SettingsPage() {
   }, [emailNotifications, productUpdates, autoSave, highQuality, defaultFormat])
 
   const handleSaveProfile = async () => {
+    if (isOAuthManagedProfile) {
+      toast.error("Profile details are managed by your OAuth provider.")
+      return
+    }
+
     setLoading(true)
     setProfileSaved(false)
     
@@ -211,6 +279,7 @@ export default function SettingsPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="John Doe" 
                 className="mt-2" 
+                disabled={isOAuthManagedProfile}
               />
             </div>
             <div>
@@ -222,10 +291,11 @@ export default function SettingsPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="john@example.com" 
                 className="mt-2" 
+                disabled={isOAuthManagedProfile}
               />
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={handleSaveProfile} disabled={loading}>
+              <Button onClick={handleSaveProfile} disabled={loading || isOAuthManagedProfile}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -240,9 +310,19 @@ export default function SettingsPage() {
                   "Save Changes"
                 )}
               </Button>
-              {session?.user?.createdAt && (
-                <p className="text-sm text-muted-foreground">
-                  Member since {new Date(session.user.createdAt).toLocaleDateString()}
+            </div>
+            <div className="rounded-lg border bg-muted/20 p-3 text-sm">
+              {isOAuthManagedProfile && (
+                <p className="mb-1 text-muted-foreground">
+                  Profile editing is disabled for Google/GitHub authenticated accounts.
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                Auth provider: <span className="font-medium text-foreground">{authProviderLabel}</span>
+              </p>
+              {memberSinceLabel && (
+                <p className="mt-1 text-muted-foreground">
+                  Joined: <span className="font-medium text-foreground">{memberSinceLabel}</span>
                 </p>
               )}
             </div>
@@ -292,18 +372,17 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div>
               <Label>Theme</Label>
-              <Select value={theme || "system"} onValueChange={setTheme}>
+              <Select value={selectedTheme} onValueChange={setTheme}>
                 <SelectTrigger className="mt-2">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="light">Light</SelectItem>
                   <SelectItem value="dark">Dark</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-2">
-                Changes apply immediately across all pages
+                Default follows your system until you pick Light or Dark.
               </p>
             </div>
           </div>

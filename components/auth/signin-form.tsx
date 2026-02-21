@@ -13,9 +13,12 @@ import { toast } from "sonner"
 
 interface SignInFormProps {
   callbackUrl?: string
+  googleEnabled?: boolean
+  githubEnabled?: boolean
 }
 
-type LastUsedMethod = "credentials" | "google"
+type OAuthProvider = "google" | "github"
+type LastUsedMethod = "credentials" | OAuthProvider
 
 const STORAGE_KEYS = {
   rememberMe: "screensplit.auth.remember_me",
@@ -75,9 +78,13 @@ function formatLastUsedTime(timestamp?: number | null) {
   return date.toLocaleString()
 }
 
-export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProps) {
+export function SignInForm({
+  callbackUrl = "/apps/screensplit",
+  googleEnabled = false,
+  githubEnabled = false,
+}: SignInFormProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+  const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState("")
   const [email, setEmail] = useState("")
   const [rememberMe, setRememberMe] = useState(false)
@@ -95,18 +102,28 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
     setRememberMe(savedRememberMe)
     setSavedEmail(savedEmail)
     setEmail(savedRememberMe ? savedEmail : "")
-    setLastUsedMethod(savedMethod === "credentials" || savedMethod === "google" ? savedMethod : null)
+    setLastUsedMethod(
+      savedMethod === "credentials" || savedMethod === "google" || savedMethod === "github"
+        ? savedMethod
+        : null
+    )
     setLastUsedAt(Number.isFinite(savedLastUsedAt) ? savedLastUsedAt : null)
     setHasHydratedStorage(true)
   }, [])
 
   const lastUsedMessage = useMemo(() => {
     if (!lastUsedMethod) return ""
-    const methodLabel = lastUsedMethod === "google" ? "Google" : "Email and password"
+    const methodLabel =
+      lastUsedMethod === "google"
+        ? "Google"
+        : lastUsedMethod === "github"
+          ? "GitHub"
+          : "Email and password"
     const identifier = lastUsedMethod === "credentials" && savedEmail ? ` (${savedEmail})` : ""
     const when = formatLastUsedTime(lastUsedAt)
     return when ? `Last used: ${methodLabel}${identifier} (${when})` : `Last used: ${methodLabel}${identifier}`
   }, [lastUsedAt, lastUsedMethod, savedEmail])
+  const hasOAuthProviders = googleEnabled || githubEnabled
 
   function persistRememberPreferences(nextRememberMe: boolean, nextEmail: string) {
     setStorageItem(STORAGE_KEYS.rememberMe, nextRememberMe ? "1" : "0")
@@ -168,31 +185,37 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
     }
   }
 
-  async function signInWithGoogle() {
-    setIsGoogleLoading(true)
+  async function signInWithOAuth(provider: OAuthProvider) {
+    if ((provider === "google" && !googleEnabled) || (provider === "github" && !githubEnabled)) {
+      return
+    }
+    setOauthLoadingProvider(provider)
     try {
-      toast("Redirecting to Google...")
-      persistLastUsed("google")
-      await signIn("google", { callbackUrl })
-    } catch (error) {
-      setError("Failed to sign in with Google")
-      toast.error("Failed to sign in with Google")
+      const providerLabel = provider === "google" ? "Google" : "GitHub"
+      toast(`Redirecting to ${providerLabel}...`)
+      persistLastUsed(provider)
+      await signIn(provider, { callbackUrl })
+    } catch {
+      const providerLabel = provider === "google" ? "Google" : "GitHub"
+      setError(`Failed to sign in with ${providerLabel}`)
+      toast.error(`Failed to sign in with ${providerLabel}`)
     } finally {
-      setIsGoogleLoading(false)
+      setOauthLoadingProvider(null)
     }
   }
 
   return (
-    <Card className="w-full border-border/60 bg-background/95 shadow-xl backdrop-blur-sm">
-      <CardHeader className="space-y-2 pb-3">
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
+    <Card className="w-full overflow-hidden rounded-2xl border border-border/60 bg-background/92 shadow-[0_16px_50px_-34px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+      <div className="h-0.5 w-full bg-gradient-to-r from-sky-500/70 via-emerald-400/65 to-cyan-500/70" />
+      <CardHeader className="space-y-1 pb-2 pt-4">
+        <CardTitle className="text-xl tracking-tight">Sign in</CardTitle>
         <CardDescription>
-          Sign in to continue to your workspace.
+          Choose a sign-in method.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 pb-4">
         {hasHydratedStorage && lastUsedMessage && (
-          <div className="rounded-md border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+          <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
             {lastUsedMessage}
           </div>
         )}
@@ -203,32 +226,57 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
           </Alert>
         )}
 
-        <Button
-          variant="outline"
-          onClick={signInWithGoogle}
-          disabled={isGoogleLoading || isLoading}
-          className="w-full"
-        >
-          {isGoogleLoading ? (
-            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Icons.google className="mr-2 h-4 w-4" />
-          )}
-          Continue with Google
-        </Button>
+        {hasOAuthProviders && (
+          <>
+            <div className={`grid gap-2 ${googleEnabled && githubEnabled ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+              {googleEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => signInWithOAuth("google")}
+                  disabled={oauthLoadingProvider !== null || isLoading}
+                  className="h-10 w-full justify-start rounded-lg border-border/70 bg-background/70 px-3 text-sm font-medium hover:bg-muted/45"
+                >
+                  {oauthLoadingProvider === "google" ? (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Icons.google className="mr-2 h-4 w-4" />
+                  )}
+                  Google
+                </Button>
+              )}
+              {githubEnabled && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => signInWithOAuth("github")}
+                  disabled={oauthLoadingProvider !== null || isLoading}
+                  className="h-10 w-full justify-start rounded-lg border-border/70 bg-background/70 px-3 text-sm font-medium hover:bg-muted/45"
+                >
+                  {oauthLoadingProvider === "github" ? (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Icons.github className="mr-2 h-4 w-4" />
+                  )}
+                  GitHub
+                </Button>
+              )}
+            </div>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
-        </div>
+            <div className="relative py-0.5">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 tracking-[0.14em] text-muted-foreground">
+                  Email
+                </span>
+              </div>
+            </div>
+          </>
+        )}
 
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -241,6 +289,7 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
               onChange={(event) => setEmail(event.target.value)}
               required
               disabled={isLoading}
+              className="mt-1 h-10 rounded-lg border-border/70 bg-background/70"
             />
           </div>
           <div className="space-y-2">
@@ -253,10 +302,11 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
               autoComplete="current-password"
               required
               disabled={isLoading}
+              className="mt-1 h-10 rounded-lg border-border/70 bg-background/70"
             />
           </div>
 
-          <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center justify-between text-xs sm:text-sm">
             <label className="flex items-center gap-2 text-muted-foreground">
               <input
                 type="checkbox"
@@ -269,7 +319,7 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
             </label>
             <Link
               href="/auth/forgot-password"
-              className="text-primary hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               Forgot your password?
             </Link>
@@ -277,7 +327,7 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
 
           <Button
             type="submit"
-            className="w-full"
+            className="h-10 w-full rounded-lg shadow-sm"
             disabled={isLoading}
           >
             {isLoading ? (
@@ -292,7 +342,7 @@ export function SignInForm({ callbackUrl = "/apps/screensplit" }: SignInFormProp
         </form>
 
         <div className="pt-1 text-center text-sm">
-          Don&apos;t have an account?{" "}
+          Need an account?{" "}
           <Link
             href="/auth/signup"
             className="font-semibold text-primary hover:underline"
