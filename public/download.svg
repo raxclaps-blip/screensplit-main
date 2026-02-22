@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="Rounded gradient square with centered vertical bar">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"></stop>
+      <stop offset="100%" stop-color="#9CA3AF"></stop>
+    </linearGradient>
+  </defs>
+
+  <!-- rounded square -->
+  <rect x="0" y="0" width="256" height="256" rx="48" ry="48" fill="url(#grad)"></rect>
+
+  <!-- centered thin vertical bar -->
+  <rect x="120" y="64" width="16" height="128" rx="8" ry="8" fill="#000000"></rect>
+</svg>
