@@ -11,6 +11,8 @@ import { VideoControlsState } from "@/components/videosplit/video-controls"
 export default function VideosplitPage() {
   const [beforeVideo, setBeforeVideo] = useState<string | null>(null)
   const [afterVideo, setAfterVideo] = useState<string | null>(null)
+  const [beforeFile, setBeforeFile] = useState<File | null>(null)
+  const [afterFile, setAfterFile] = useState<File | null>(null)
   const [showComposer, setShowComposer] = useState(false)
   const beforeVideoRef = useRef<string | null>(null)
   const afterVideoRef = useRef<string | null>(null)
@@ -94,7 +96,7 @@ export default function VideosplitPage() {
   }, [])
 
   const handleContinue = () => {
-    if (beforeVideo && afterVideo) {
+    if (beforeVideo && afterVideo && beforeFile && afterFile) {
       toast("Opening composer...", { description: "Combine and export your comparison video" })
       setShowComposer(true)
     }
@@ -118,11 +120,13 @@ export default function VideosplitPage() {
             <VideoUploader
               label="Before"
               video={beforeVideo}
-              onVideoChange={(src) => {
+              onVideoChange={(file, src) => {
+                setBeforeFile(file)
                 setBeforeVideoUrl(src)
                 toast.success("Before video added")
               }}
               onRemove={() => {
+                setBeforeFile(null)
                 setBeforeVideoUrl(null)
                 toast("Removed", { description: "Before video removed" })
               }}
@@ -130,18 +134,20 @@ export default function VideosplitPage() {
             <VideoUploader
               label="After"
               video={afterVideo}
-              onVideoChange={(src) => {
+              onVideoChange={(file, src) => {
+                setAfterFile(file)
                 setAfterVideoUrl(src)
                 toast.success("After video added")
               }}
               onRemove={() => {
+                setAfterFile(null)
                 setAfterVideoUrl(null)
                 toast("Removed", { description: "After video removed" })
               }}
             />
           </div>
 
-          {beforeVideo && afterVideo && (
+          {beforeVideo && afterVideo && beforeFile && afterFile && (
             <div className="mt-8 flex justify-center">
               <Button size="lg" className="gap-2 rounded-full" onClick={handleContinue}>
                 Continue to Composer
@@ -154,6 +160,8 @@ export default function VideosplitPage() {
         <VideoComposer
           beforeSrc={beforeVideo!}
           afterSrc={afterVideo!}
+          beforeFile={beforeFile!}
+          afterFile={afterFile!}
           onBack={handleBack}
           controls={controls}
           onControlsChange={(patch) => setControls((prev) => ({ ...prev, ...patch }))}

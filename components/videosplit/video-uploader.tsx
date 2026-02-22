@@ -10,7 +10,7 @@ import { toast } from "sonner"
 interface VideoUploaderProps {
   label: string
   video: string | null
-  onVideoChange: (src: string) => void
+  onVideoChange: (file: File, src: string) => void
   onRemove: () => void
 }
 
@@ -29,7 +29,7 @@ export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUp
     v.src = url
     v.onloadedmetadata = () => {
       const isPortrait = v.videoHeight > v.videoWidth
-      onVideoChange(url)
+      onVideoChange(file, url)
       if (!isPortrait) {
         toast("Landscape video detected", {
           description: "It will still work, but portrait clips are recommended for best results.",
