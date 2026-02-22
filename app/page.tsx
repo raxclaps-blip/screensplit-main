@@ -1,12 +1,10 @@
 import AuthProvider from "@/components/providers/session-provider"
 import HeroSection from "@/components/landing/Hero"
 import { Navbar } from "@/components/common/Navbar"
-import { LandingSocialProof } from "@/components/landing/LandingSocialProof"
-import { LandingFeatures } from "@/components/landing/LandingFeatures"
-import { LandingProof } from "@/components/landing/LandingProof"
-import { LandingPricing } from "@/components/landing/LandingPricing"
-import { LandingTestimonials } from "@/components/landing/LandingTestimonials"
-import { LandingCTA } from "@/components/landing/LandingCTA"
+import { FeaturesSection } from "@/components/landing/Features"
+import { HowItWorksSection } from "@/components/landing/HowItWorks"
+import { PricingSection } from "@/components/landing/Pricing"
+import { CtaSection } from "@/components/landing/CtaSection"
 import { LandingFooter } from "@/components/landing/LandingFooter"
 
 export default async function LandingPage() {
@@ -14,15 +12,15 @@ export default async function LandingPage() {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-background font-sans antialiased">
+      <div className="min-h-screen bg-background font-sans antialiased text-foreground overflow-x-hidden selection:bg-primary/30">
         <Navbar />
-        <HeroSection />
-        <LandingSocialProof />
-        <LandingFeatures />
-        <LandingProof />
-        <LandingPricing />
-        <LandingTestimonials />
-        <LandingCTA />
+        <main>
+          <HeroSection />
+          <FeaturesSection />
+          <HowItWorksSection />
+          <PricingSection />
+          <CtaSection />
+        </main>
         <LandingFooter />
       </div>
     </AuthProvider>

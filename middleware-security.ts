@@ -9,7 +9,7 @@ function buildCsp(nonce: string, isProd: boolean): string {
   return isProd
     ? [
         "default-src 'self'",
-        `script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://*.vercel.app`,
+        `script-src 'self' 'unsafe-inline' https://www.google.com https://www.gstatic.com https://*.vercel.app https://static.cloudflareinsights.com`,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: blob: https:",
