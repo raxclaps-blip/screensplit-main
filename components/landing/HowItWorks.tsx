@@ -1,150 +1,66 @@
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Download, Edit, LogIn, Share, Upload, WandIcon } from "lucide-react";
-import Logo from "../common/Logo";
+import { AnimatedGroup } from "@/components/ui/animated-group"
+import { TextEffect } from "@/components/ui/text-effect"
+import { UploadCloud, SlidersHorizontal, Download } from "lucide-react"
 
-export default function HowItWorks() {
-  return (
-    <section id="how-it-works">
-      <div className="bg-muted dark:bg-background border-t border-border">
-        
-        <div className="mx-auto max-w-7xl px-6 py-24 md:py-32 border-x border-border">
-            <div className="mx-auto max-w-lg space-y-6 text-center">
-          <h2 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">
-            How It Works
-          </h2>
-          <p className="text-muted-foreground mb-16">
-            Upload before and after images, customize in the canvas editor, and
-            export your comparison ready to share.
-          </p>
-        </div>
-            <div className="mx-auto max-w-5xl px-6">
-          <div className="relative mx-auto flex max-w-sm items-center justify-between">
-            <div className="space-y-4">
-              <IntegrationCard
-                position="left-top"
-                icon={<LogIn className="size-5" />}
-                label="Sign Up"
-              />
-              <IntegrationCard
-                position="left-middle"
-                icon={<Upload className="size-5" />}
-                label="Upload"
-              />
-              <IntegrationCard
-                position="left-bottom"
-                icon={<WandIcon className="size-5" />}
-                label="Customize"
-              />
-            </div>
-            <div className="mx-auto my-2 flex w-fit justify-center gap-2">
-              <div className="bg-muted relative z-20 rounded-2xl border p-1">
-                <IntegrationCard
-                  className="shadow-black-950/10 dark:bg-background size-16 border-black/25 shadow-xl dark:border-white/25 dark:shadow-white/10"
-                  isCenter={true}
-                >
-                  <Logo/>
-                </IntegrationCard>
-              </div>
-            </div>
-            <div
-              role="presentation"
-              className="absolute inset-1/3 bg-[radial-gradient(var(--dots-color)_1px,transparent_1px)] opacity-50 [--dots-color:black] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] dark:[--dots-color:white]"
-            ></div>
+const steps = [
+    {
+        name: "Upload Images",
+        description: "Drop your 'before' and 'after' images securely into the browser. No uploads to our servers—ever.",
+        icon: UploadCloud,
+    },
+    {
+        name: "Adjust the Slider",
+        description: "Drag the divider to the perfect split point. Customize orientation, labels, and the handle style.",
+        icon: SlidersHorizontal,
+    },
+    {
+        name: "Export & Share",
+        description: "Export directly to your device as a high-quality image or MP4 ready for social media in one click.",
+        icon: Download,
+    }
+]
 
-            <div className="space-y-4">
-              <IntegrationCard
-                position="right-top"
-                icon={<Edit className="size-5" />}
-                label="Edit"
-              />
-              <IntegrationCard
-                position="right-middle"
-                icon={<Download className="size-5" />}
-                label="Download"
-              />
-              <IntegrationCard
-                position="right-bottom"
-                icon={<Share className="size-5" />}
-                label="Share"
-              />
+export function HowItWorksSection() {
+    return (
+        <section id="proof" className="py-24 sm:py-32 bg-muted/30">
+            <div className="mx-auto max-w-7xl px-6 lg:px-8">
+                <div className="mx-auto max-w-2xl text-center mb-16 sm:mb-20">
+                    <TextEffect as="h2" preset="fade-in-blur" className="text-base/7 font-semibold text-primary">
+                        How it Works
+                    </TextEffect>
+                    <TextEffect
+                        as="p"
+                        preset="fade-in-blur"
+                        delay={0.2}
+                        className="mt-2 text-4xl sm:text-5xl font-semibold tracking-tight text-foreground"
+                    >
+                        Three steps to perfect comparisons
+                    </TextEffect>
+                </div>
+
+                <div className="relative mx-auto max-w-5xl">
+                    {/* Connecting line for desktop */}
+                    <div className="hidden md:block absolute top-[2.5rem] left-[10%] right-[10%] h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -z-10" />
+
+                    <AnimatedGroup
+                        className="grid grid-cols-1 gap-8 md:grid-cols-3"
+                        variants={{
+                            container: { visible: { transition: { staggerChildren: 0.2 } } },
+                            item: { hidden: { opacity: 0, scale: 0.95, filter: "blur(4px)" }, visible: { opacity: 1, scale: 1, filter: "blur(0px)", transition: { type: "spring", stiffness: 100 } } }
+                        }}
+                    >
+                        {steps.map((step, index) => (
+                            <div key={index} className="relative flex flex-col items-center text-center group">
+                                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-background border border-primary/40 shadow-sm ring-1 ring-primary/20 transition-all duration-300">
+                                    <step.icon className="h-8 w-8 text-primary transition-colors" />
+                                </div>
+                                <h3 className="text-xl font-semibold text-foreground mb-3">{step.name}</h3>
+                                <p className="text-muted-foreground leading-relaxed max-w-xs">{step.description}</p>
+                            </div>
+                        ))}
+                    </AnimatedGroup>
+                </div>
             </div>
-          </div>
-          <div className="mx-auto mt-12 max-w-lg space-y-6 text-center">
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/apps/screensplit">Try It Now</Link>
-            </Button>
-          </div>
-        </div>
-        </div>
-      </div>
-    </section>
-  );
+        </section>
+    )
 }
-
-const IntegrationCard = ({
-  children,
-  icon,
-  label,
-  className,
-  position,
-  isCenter = false,
-}: {
-  children?: React.ReactNode;
-  icon?: React.ReactNode;
-  label?: string;
-  className?: string;
-  position?:
-    | "left-top"
-    | "left-middle"
-    | "left-bottom"
-    | "right-top"
-    | "right-middle"
-    | "right-bottom";
-  isCenter?: boolean;
-}) => {
-  return (
-    <div
-      className={cn(
-        "bg-secondary relative flex rounded-xl border dark:bg-transparent",
-        isCenter ? "size-16" : "h-auto w-18 py-2",
-        className
-      )}
-    >
-      <div
-        className={cn(
-          "relative z-20 m-auto flex flex-col items-center justify-center gap-1"
-        )}
-      >
-        <div className="flex items-center justify-center">
-          {icon || children}
-        </div>
-        {label && (
-          <span className="text-muted-foreground text-center text-[10px] font-medium leading-tight">
-            {label}
-          </span>
-        )}
-      </div>
-      {position && !isCenter && (
-        <div
-          className={cn(
-            "bg-border absolute z-10 h-px",
-            position === "left-top" &&
-              "left-full top-1/2 w-[130px] origin-left rotate-[25deg]",
-            position === "left-middle" &&
-              "left-full top-1/2 w-[120px] origin-left",
-            position === "left-bottom" &&
-              "left-full top-1/2 w-[130px] origin-left rotate-[-25deg]",
-            position === "right-top" &&
-              "right-full top-1/2 w-[130px] origin-right rotate-[-25deg]",
-            position === "right-middle" &&
-              "right-full top-1/2 w-[120px] origin-right",
-            position === "right-bottom" &&
-              "right-full top-1/2 w-[130px] origin-right rotate-[25deg]"
-          )}
-        />
-      )}
-    </div>
-  );
-};
