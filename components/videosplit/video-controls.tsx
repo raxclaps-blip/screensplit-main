@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -23,10 +22,15 @@ export type TextPosition =
   | "bottom-center"
   | "bottom-right"
 
+export type VideoCompositionMode = "sequential" | "side-by-side-sequential"
+
 export interface VideoControlsState {
+  // Composition
+  compositionMode: VideoCompositionMode
+
   // Layout Direction
   direction: "horizontal" | "vertical"
-  
+
   // Labels & Text
   beforeText: string
   afterText: string
@@ -38,17 +42,17 @@ export interface VideoControlsState {
   showTextBackground: boolean
   textBgOpacity: number
   textPosition: TextPosition
-  
+
   // Canvas Background
   bgColor: string
-  
+
   // Typography
   fontFamily: string
   mainTextBold: boolean
   mainTextItalic: boolean
   subtextBold: boolean
   subtextItalic: boolean
-  
+
   // Background Effects
   borderWidth: number
   borderColor: string
@@ -59,14 +63,14 @@ export interface VideoControlsState {
   blurAmount: number
   bgPadding: number
   bgShape: "rounded" | "pill" | "circle" | "hexagon"
-  
+
   // Image Filters
   brightness: number
   contrast: number
   saturation: number
   grayscale: number
   sepia: number
-  
+
   // Video-specific controls
   enableFade: boolean
   fadeSeconds: number
@@ -82,9 +86,9 @@ function PositionIcon({ pos }: { pos: TextPosition }) {
   const dotStyle: React.CSSProperties = { width: 6, height: 6, borderRadius: 9999, backgroundColor: 'currentColor' }
   const gridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gridTemplateRows: 'repeat(3, 1fr)', width: 28, height: 28, borderRadius: 6, border: '1px solid currentColor', opacity: 0.9 }
   const map: Record<TextPosition, [number, number]> = {
-    'top-left': [1,1], 'top-center': [1,2], 'top-right': [1,3],
-    'center-left': [2,1], 'center': [2,2], 'center-right': [2,3],
-    'bottom-left': [3,1], 'bottom-center': [3,2], 'bottom-right': [3,3],
+    'top-left': [1, 1], 'top-center': [1, 2], 'top-right': [1, 3],
+    'center-left': [2, 1], 'center': [2, 2], 'center-right': [2, 3],
+    'bottom-left': [3, 1], 'bottom-center': [3, 2], 'bottom-right': [3, 3],
   }
   const [r, c] = map[pos]
   const cells = Array.from({ length: 9 }, (_, i) => {
@@ -112,8 +116,34 @@ function ShapeIcon({ shape }: { shape: "rounded" | "pill" | "circle" | "hexagon"
   return <div style={{ ...base, borderRadius: 6 }} />
 }
 
+function SequentialModeIcon() {
+  return (
+    <svg viewBox="0 0 48 28" className="h-7 w-11" aria-hidden="true">
+      <rect x="1.5" y="2" width="19" height="24" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="27.5" y="2" width="19" height="24" rx="3" fill="none" stroke="currentColor" strokeWidth="2" opacity="0.45" />
+      <path d="M22 14H28" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M26 11L30 14L26 17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function SideBySideSequentialModeIcon() {
+  return (
+    <svg viewBox="0 0 48 28" className="h-7 w-11" aria-hidden="true">
+      <rect x="1.5" y="2" width="45" height="24" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M24 2V26" stroke="currentColor" strokeWidth="2" opacity="0.65" />
+      <path d="M9 14H17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M16 11L20 14L16 17" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="34" cy="14" r="2" fill="currentColor" opacity="0.85" />
+    </svg>
+  )
+}
+
 // Default values to support "Reset All" action
 const DEFAULTS: Partial<VideoControlsState> = {
+  // Composition
+  compositionMode: "sequential",
+
   // Layout Direction
   direction: "horizontal",
 
@@ -122,7 +152,7 @@ const DEFAULTS: Partial<VideoControlsState> = {
   afterText: "After",
   beforeSubtext: "",
   afterSubtext: "",
-  fontSize: 48,
+  fontSize: 18,
   textColor: "#ffffff",
   textBgColor: "#000000",
   showTextBackground: true,
@@ -163,6 +193,26 @@ const DEFAULTS: Partial<VideoControlsState> = {
   includeAudio: true,
 }
 
+const MODE_OPTIONS: Array<{
+  value: VideoCompositionMode
+  label: string
+  description: string
+  Icon: () => React.JSX.Element
+}> = [
+    {
+      value: "sequential",
+      label: "Sequential",
+      description: "Single-frame timeline: before then after.",
+      Icon: SequentialModeIcon,
+    },
+    {
+      value: "side-by-side-sequential",
+      label: "Side by Side Sequential",
+      description: "Both visible; before plays, then after.",
+      Icon: SideBySideSequentialModeIcon,
+    },
+  ]
+
 export function VideoControls({ state, onChange }: Props) {
   const set = (patch: Partial<VideoControlsState>) => onChange(patch)
 
@@ -183,6 +233,37 @@ export function VideoControls({ state, onChange }: Props) {
       </div>
 
       {/* Direction */}
+      <div className="space-y-2">
+        <Label>Composition Mode</Label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {MODE_OPTIONS.map(({ value, label, description, Icon }) => {
+            const active = state.compositionMode === value
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => set({ compositionMode: value })}
+                className={`rounded-xl border p-3 text-left transition-colors ${active
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-background hover:border-primary/40 hover:bg-muted/30"
+                  }`}
+              >
+                <div className="flex flex-col items-center gap-3 text-center py-2">
+                  <p className="text-sm font-semibold leading-tight">{label}</p>
+                  <div
+                    className={`rounded-md border p-2 ${active ? "border-primary/50 bg-primary/10 text-primary" : "border-border/70 bg-muted/20 text-foreground"
+                      }`}
+                  >
+                    <Icon />
+                  </div>
+                  <p className="text-xs leading-snug text-muted-foreground">{description}</p>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label>Layout Direction</Label>
         <Select value={state.direction} onValueChange={(v: "horizontal" | "vertical") => set({ direction: v })}>
@@ -266,7 +347,7 @@ export function VideoControls({ state, onChange }: Props) {
             {/* Font Size */}
             <div className="space-y-2">
               <Label>Font Size: {state.fontSize}px</Label>
-              <Slider value={[state.fontSize]} onValueChange={(v) => set({ fontSize: v[0] })} min={24} max={120} step={4} />
+              <Slider value={[state.fontSize]} onValueChange={(v) => set({ fontSize: v[0] })} min={12} max={120} step={2} />
             </div>
             {/* Main Text Styling */}
             <div className="space-y-2">
@@ -296,7 +377,7 @@ export function VideoControls({ state, onChange }: Props) {
             <div className="space-y-2">
               <Label>Text Position</Label>
               <div className="grid grid-cols-3 gap-2">
-                {(["top-left","top-center","top-right","center-left","center","center-right","bottom-left","bottom-center","bottom-right"] as TextPosition[]).map((pos) => (
+                {(["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"] as TextPosition[]).map((pos) => (
                   <Button key={pos} type="button" variant={state.textPosition === pos ? "default" : "outline"} size="sm" onClick={() => set({ textPosition: pos })} className="h-12 flex flex-col items-center justify-center gap-1">
                     <PositionIcon pos={pos} />
                     <span className="text-[10px]">{pos.replace("-", " ")}</span>
@@ -326,7 +407,7 @@ export function VideoControls({ state, onChange }: Props) {
                 <div className="space-y-2">
                   <Label>Background Shape</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {(["rounded","pill","circle","hexagon"] as ("rounded"|"pill"|"circle"|"hexagon")[]).map((shape) => (
+                    {(["rounded", "pill", "circle", "hexagon"] as ("rounded" | "pill" | "circle" | "hexagon")[]).map((shape) => (
                       <Button key={shape} type="button" variant={state.bgShape === shape ? "default" : "outline"} size="sm" onClick={() => set({ bgShape: shape })} className="flex items-center gap-2">
                         <ShapeIcon shape={shape} />
                         <span className="text-xs">{shape.charAt(0).toUpperCase() + shape.slice(1)}</span>

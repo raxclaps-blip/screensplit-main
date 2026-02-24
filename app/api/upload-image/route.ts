@@ -35,45 +35,107 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Parse JSON body
-    const body = await req.json()
-    const {
-      imageDataUrl,
-      title,
-      layout,
-      beforeLabel,
-      afterLabel,
-      beforeSubtext,
-      afterSubtext,
-      fontSize,
-      textColor,
-      bgColor,
-      textBgColor,
-      textPosition,
-      exportFormat,
-      isPrivate = false,
-      password,
-    } = body
+    const contentType = req.headers.get("content-type") || ""
+    let buffer: Buffer
+    let title: string | undefined
+    let layout: string | undefined
+    let beforeLabel: string | undefined
+    let afterLabel: string | undefined
+    let beforeSubtext: string | undefined
+    let afterSubtext: string | undefined
+    let fontSize: number | undefined
+    let textColor: string | undefined
+    let bgColor: string | undefined
+    let textBgColor: string | undefined
+    let textPosition: string | undefined
+    let exportFormat: string | undefined
+    let isPrivate = false
+    let password: string | undefined
 
-    if (!imageDataUrl) {
-      return NextResponse.json(
-        { error: "Image data is required" },
-        { status: 400 }
-      )
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData()
+      const image = formData.get("image")
+      if (!(image instanceof File)) {
+        return NextResponse.json({ error: "Image file is required" }, { status: 400 })
+      }
+      if (image.size <= 0) {
+        return NextResponse.json({ error: "Image file is empty" }, { status: 400 })
+      }
+
+      const getString = (key: string): string | undefined => {
+        const value = formData.get(key)
+        return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined
+      }
+
+      buffer = Buffer.from(await image.arrayBuffer())
+      title = getString("title")
+      layout = getString("layout")
+      beforeLabel = getString("beforeLabel")
+      afterLabel = getString("afterLabel")
+      beforeSubtext = getString("beforeSubtext")
+      afterSubtext = getString("afterSubtext")
+      textColor = getString("textColor")
+      bgColor = getString("bgColor")
+      textBgColor = getString("textBgColor")
+      textPosition = getString("textPosition")
+      exportFormat = getString("exportFormat")
+      password = getString("password")
+      isPrivate = (getString("isPrivate") || "").toLowerCase() === "true"
+      const parsedFontSize = Number.parseInt(getString("fontSize") || "", 10)
+      fontSize = Number.isFinite(parsedFontSize) ? parsedFontSize : undefined
+
+      if (!exportFormat) {
+        const ext = image.name.split(".").pop()?.toLowerCase()
+        exportFormat = ext || "png"
+      }
+    } else {
+      // Existing JSON payload path (backward compatible)
+      const body = await req.json()
+      const imageDataUrl = body?.imageDataUrl as string | undefined
+      title = body?.title
+      layout = body?.layout
+      beforeLabel = body?.beforeLabel
+      afterLabel = body?.afterLabel
+      beforeSubtext = body?.beforeSubtext
+      afterSubtext = body?.afterSubtext
+      fontSize = body?.fontSize
+      textColor = body?.textColor
+      bgColor = body?.bgColor
+      textBgColor = body?.textBgColor
+      textPosition = body?.textPosition
+      exportFormat = body?.exportFormat
+      isPrivate = Boolean(body?.isPrivate)
+      password = body?.password
+
+      if (!imageDataUrl) {
+        return NextResponse.json(
+          { error: "Image data is required" },
+          { status: 400 }
+        )
+      }
+
+      const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, "")
+      buffer = Buffer.from(base64Data, "base64")
     }
-
-    // Convert data URL to buffer
-    const base64Data = imageDataUrl.replace(/^data:image\/\w+;base64,/, "")
-    const buffer = Buffer.from(base64Data, "base64")
 
     // Generate unique filename and upload to cloud storage
     const timestamp = Date.now()
     const randomString = Math.random().toString(36).substring(2, 15)
-    const extension = exportFormat || "png"
+    const rawExtension = (exportFormat || "png").toLowerCase()
+    const extension =
+      rawExtension === "jpg" || rawExtension === "jpeg"
+        ? "jpg"
+        : rawExtension === "webp"
+        ? "webp"
+        : rawExtension === "avif"
+        ? "avif"
+        : rawExtension === "bmp"
+        ? "bmp"
+        : "png"
     const fileName = `screensplit-${timestamp}-${randomString}.${extension}`
     
-    const contentType = `image/${extension === "jpg" ? "jpeg" : extension}`
-    const imageUrl = await uploadToR2(buffer, fileName, contentType)
+    const uploadContentType = `image/${extension === "jpg" ? "jpeg" : extension}`
+    const imageUrl = await uploadToR2(buffer, fileName, uploadContentType)
 
     // Generate unique share slug
     const shareSlug = nanoid(10)

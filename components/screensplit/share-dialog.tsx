@@ -10,7 +10,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Copy, Check, Lock, Unlock, RefreshCw, ExternalLink, MessageSquare } from "lucide-react"
 import { toast } from "sonner"
 import { customAlphabet } from "nanoid"
-import Image from "next/image"
 
 const nanoid = customAlphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*", 16)
 
@@ -106,11 +105,7 @@ export function ShareDialog({
         <div className="space-y-6">
           {/* Image Preview */}
           <div className="relative aspect-video overflow-hidden rounded-lg border border-border bg-muted">
-            <Image 
-              src={imagePreviewSrc} 
-              alt="Preview" 
-              className="h-full w-full object-contain"
-            />
+            <img src={imagePreviewSrc} alt="Preview" className="h-full w-full object-contain" />
           </div>
 
           {/* Share Link */}

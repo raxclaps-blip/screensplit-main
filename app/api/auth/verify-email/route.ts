@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Update user email verification status
     const user = await prisma.user.update({
       where: { email },
-      data: { emailVerified: new Date() },
+      data: { emailVerified: true },
       select: {
         id: true,
         email: true,

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { User, Bell, Palette, Download, Shield, Loader2, Check } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useSession, signOut } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
 import {
@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import { authClient } from "@/lib/auth-client"
 
 type SettingsResponse = {
   user?: {
@@ -37,7 +38,8 @@ function formatProviderName(provider: string) {
 }
 
 export default function SettingsPage() {
-  const { data: session, update } = useSession()
+  const router = useRouter()
+  const { data: session } = authClient.useSession()
   const { theme, resolvedTheme, setTheme } = useTheme()
   
   // User profile state
@@ -173,8 +175,6 @@ export default function SettingsPage() {
       }
 
       // Update session
-      await update({ name, email })
-      
       setProfileSaved(true)
       toast.success("Profile updated successfully")
       
@@ -244,7 +244,9 @@ export default function SettingsPage() {
       toast.success("Account deleted successfully")
       
       // Sign out and redirect
-      await signOut({ callbackUrl: "/" })
+      await authClient.signOut()
+      router.replace("/")
+      router.refresh()
     } catch (error: any) {
       toast.error(error.message || "Failed to delete account")
       setDeleteLoading(false)

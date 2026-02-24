@@ -10,9 +10,12 @@ import { toast } from "sonner"
 interface VideoUploaderProps {
   label: string
   video: string | null
-  onVideoChange: (src: string) => void
+  onVideoChange: (file: File, src: string) => void
   onRemove: () => void
 }
+
+const MAX_VIDEO_UPLOAD_BYTES = 200 * 1024 * 1024
+const MAX_VIDEO_UPLOAD_SECONDS = 121
 
 export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -23,13 +26,24 @@ export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUp
       return
     }
 
+    if (file.size > MAX_VIDEO_UPLOAD_BYTES) {
+      toast.error("File too large", { description: "Each video must be 200MB or smaller." })
+      return
+    }
+
     const url = URL.createObjectURL(file)
     const v = document.createElement("video")
     v.preload = "metadata"
     v.src = url
     v.onloadedmetadata = () => {
+      if (Number.isFinite(v.duration) && v.duration > MAX_VIDEO_UPLOAD_SECONDS) {
+        URL.revokeObjectURL(url)
+        toast.error("Video too long", { description: `Each video must be ${MAX_VIDEO_UPLOAD_SECONDS} seconds or shorter.` })
+        return
+      }
+
       const isPortrait = v.videoHeight > v.videoWidth
-      onVideoChange(url)
+      onVideoChange(file, url)
       if (!isPortrait) {
         toast("Landscape video detected", {
           description: "It will still work, but portrait clips are recommended for best results.",
@@ -71,7 +85,7 @@ export function VideoUploader({ label, video, onVideoChange, onRemove }: VideoUp
           <Upload className="h-6 w-6" />
           <div>
             <p className="font-medium">Click to upload or drag & drop</p>
-            <p className="text-xs text-muted-foreground">MP4, WebM, MOV up to ~200MB</p>
+            <p className="text-xs text-muted-foreground">MP4, WebM, MOV up to 200MB and 121 seconds</p>
           </div>
           <Input
             ref={inputRef}

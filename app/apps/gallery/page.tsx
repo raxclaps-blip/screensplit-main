@@ -1,36 +1,23 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, memo, useRef } from "react"
+import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { 
-  ImageIcon, 
-  Eye, 
-  Download, 
-  Share2, 
-  Lock, 
-  Globe, 
-  Calendar,
-  MoreHorizontal,
-  Trash2,
-  Edit,
+import {
+  ImageIcon,
+  Download,
+  Share2,
   Loader2
 } from "lucide-react"
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import { ShareDialog } from "@/components/screensplit/share-dialog"
-import { ProgressiveImage } from "@/components/ui/progressive-image"
+import { GalleryCard } from "@/components/gallery/gallery-card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 import {
   Dialog,
   DialogContent,
@@ -55,6 +42,7 @@ interface Project {
   title?: string
   description?: string
   shareSlug?: string
+  finalImageUrl?: string | null
   shareMessage?: string
   isPrivate: boolean
   isPublic: boolean
@@ -67,9 +55,10 @@ interface Project {
 }
 
 export default function GalleryPage() {
-  const { data: session } = useSession()
+  const PAGE_SIZE = 12
+  const CACHE_KEY = "gallery_cache_v2"
+  const CACHE_TTL_MS = 2 * 60 * 1000
   const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState("comparisons")
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
@@ -84,15 +73,21 @@ export default function GalleryPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [unauthorized, setUnauthorized] = useState(false)
   const [stickyImage, setStickyImage] = useState(false)
+  const [previewLoaded, setPreviewLoaded] = useState(false)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  const isFetchingRef = useRef(false)
 
-  const fetchProjects = useCallback(async (cursorId?: string, append: boolean = false) => {
+  const fetchProjects = useCallback(async (cursorId?: string, append: boolean = false, silent: boolean = false) => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 8000)
     try {
       if (append) setLoadingMore(true)
-      else setRefreshing(true)
-      const url = cursorId ? `/api/gallery?take=24&cursorId=${encodeURIComponent(cursorId)}` : '/api/gallery?take=24'
+      else if (!silent) setRefreshing(true)
+      const url = cursorId
+        ? `/api/gallery?take=${PAGE_SIZE}&cursorId=${encodeURIComponent(cursorId)}`
+        : `/api/gallery?take=${PAGE_SIZE}`
       const response = await fetch(url, { signal: controller.signal, cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
@@ -101,7 +96,12 @@ export default function GalleryPage() {
         setNextCursor(data.nextCursorId || null)
         setProjects(prev => append ? [...prev, ...list.filter(p => !prev.some(x => x.id === p.id))] : list)
         if (!append) {
-          try { localStorage.setItem('gallery_cache_v1', JSON.stringify({ ts: Date.now(), projects: list })) } catch {}
+          try {
+            localStorage.setItem(
+              CACHE_KEY,
+              JSON.stringify({ ts: Date.now(), projects: list, hasMore: Boolean(data.hasMore), nextCursorId: data.nextCursorId || null })
+            )
+          } catch { }
         }
       } else if (response.status === 401) {
         setUnauthorized(true)
@@ -117,49 +117,48 @@ export default function GalleryPage() {
     } finally {
       clearTimeout(timeout)
       if (append) setLoadingMore(false)
-      else setRefreshing(false)
+      else if (!silent) setRefreshing(false)
+      isFetchingRef.current = false
     }
-  }, [])
+  }, [CACHE_KEY, PAGE_SIZE])
 
   useEffect(() => {
+    let loadedFromFreshCache = false
     try {
-      const raw = localStorage.getItem('gallery_cache_v1')
+      const raw = localStorage.getItem(CACHE_KEY)
       if (raw) {
         const cached = JSON.parse(raw)
         if (Array.isArray(cached?.projects)) {
           setProjects(cached.projects)
+          setHasMore(Boolean(cached?.hasMore))
+          setNextCursor(cached?.nextCursorId || null)
+          if (typeof cached?.ts === "number" && Date.now() - cached.ts < CACHE_TTL_MS) {
+            loadedFromFreshCache = true
+          }
         }
       }
-    } catch {}
-    
-    fetchProjects()
-    
-    // Add performance optimization hints
-    const preconnectLink = document.createElement("link")
-    preconnectLink.rel = "preconnect"
-    preconnectLink.href = window.location.origin
-    document.head.appendChild(preconnectLink)
-    
-    return () => {
-      try {
-        document.head.removeChild(preconnectLink)
-      } catch {}
-    }
-  }, [fetchProjects])
+    } catch { }
 
-  // Infinite scroll via IntersectionObserver
+    if (loadedFromFreshCache) {
+      void fetchProjects(undefined, false, true)
+      return
+    }
+    void fetchProjects()
+  }, [CACHE_KEY, CACHE_TTL_MS, fetchProjects])
+
+  // Infinite scroll
   useEffect(() => {
-    if (!hasMore || loading || loadingMore) return
+    if (!hasMore || loadingMore) return
     const el = loadMoreRef.current
     if (!el) return
     const obs = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
-        fetchProjects(nextCursor ?? undefined, true)
+      if (entries[0].isIntersecting && nextCursor && !isFetchingRef.current) {
+        void fetchProjects(nextCursor, true)
       }
     }, { rootMargin: '200px' })
     obs.observe(el)
     return () => obs.disconnect()
-  }, [hasMore, nextCursor, loading, loadingMore, fetchProjects])
+  }, [hasMore, nextCursor, loadingMore, fetchProjects])
 
   const handleOpenDeleteDialog = useCallback((project: Project) => {
     setProjectToDelete(project)
@@ -175,7 +174,7 @@ export default function GalleryPage() {
       const response = await fetch(`/api/gallery/${projectToDelete.id}`, {
         method: 'DELETE'
       })
-      
+
       if (response.ok) {
         setProjects(prev => prev.filter(p => p.id !== projectToDelete.id))
         toast.success('Deleted', { description: 'Project deleted successfully', id: toastId })
@@ -194,20 +193,18 @@ export default function GalleryPage() {
 
   const handleOpenImagePreview = useCallback((project: Project) => {
     setPreviewProject(project)
+    setPreviewLoaded(false)
     setImagePreviewOpen(true)
   }, [])
 
   const handleOpenShareDialog = useCallback((project: Project) => {
     setSelectedProject(project)
     setShareDialogOpen(true)
-    toast('Privacy settings', { description: 'Adjust sharing options for your image' })
   }, [])
 
   const handleCloseShareDialog = useCallback(() => {
     setShareDialogOpen(false)
-    // Refresh projects to get updated data
-    fetchProjects()
-  }, [fetchProjects])
+  }, [])
 
   const copyShareLink = useCallback(async (project: Project) => {
     const shareUrl = `${window.location.origin}/share/${project.shareSlug}`
@@ -224,7 +221,6 @@ export default function GalleryPage() {
     try {
       const response = await fetch(`/api/i/${project.shareSlug}`)
       if (response.ok) {
-        toast.loading('Downloading image...', { id: toastId })
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -244,8 +240,14 @@ export default function GalleryPage() {
     }
   }, [])
 
-  const comparisons = useMemo(() => projects.filter(p => p.shareSlug), [projects])
-  const sharedImages = useMemo(() => projects.filter(p => p.isPublic), [projects])
+  const comparisons = useMemo(() => projects.filter((p) => p.shareSlug && p.finalImageUrl), [projects])
+  const sharedImages = useMemo(() => projects.filter((p) => p.isPublic && p.shareSlug && p.finalImageUrl), [projects])
+
+  const previewImageUrl = useMemo(() => {
+    if (!previewProject?.shareSlug || !previewProject.finalImageUrl) return ""
+    const version = new Date(previewProject.updatedAt).getTime()
+    return `/api/i/${previewProject.shareSlug}?v=${version}`
+  }, [previewProject])
 
   const formatDate = useCallback((dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -254,126 +256,6 @@ export default function GalleryPage() {
       day: 'numeric'
     })
   }, [])
-
-  const ProjectCard = memo(({ project }: { project: Project }) => {
-    const handleImageClick = useCallback(() => {
-      handleOpenImagePreview(project)
-    }, [project])
-
-    const handleCardHover = useCallback(() => {
-      // Preload image on hover for instant preview
-      const img = new Image()
-      img.src = `/api/i/${project.shareSlug}`
-    }, [project.shareSlug])
-
-    const handleCopyClick = useCallback(() => {
-      copyShareLink(project)
-    }, [project])
-
-    const handleDownloadClick = useCallback(() => {
-      downloadImage(project)
-    }, [project])
-
-    const handleShareClick = useCallback(() => {
-      handleOpenShareDialog(project)
-    }, [project])
-
-    const handleDeleteClick = useCallback(() => {
-      handleOpenDeleteDialog(project)
-    }, [project])
-
-    const imageUrl = useMemo(() => `/api/i/${project.shareSlug}`, [project.shareSlug])
-
-    return (
-      <Card className="group overflow-hidden transition-all hover:shadow-lg" onMouseEnter={handleCardHover}>
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg truncate">
-                {project.title || 'Untitled Comparison'}
-              </CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {project.beforeLabel} vs {project.afterLabel}
-              </p>
-              {project.shareMessage && (
-                <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                  💬 {project.shareMessage}
-                </p>
-              )}
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCopyClick}>
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Copy Link
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadClick}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleShareClick}>
-                  <Lock className="h-4 w-4 mr-2" />
-                  Privacy Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={handleDeleteClick}
-                  className="text-foreground focus:text-foreground"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="pt-0">
-          <div 
-            className="relative aspect-video bg-muted rounded-lg overflow-hidden mb-4 cursor-pointer hover:ring-2 hover:ring-primary transition-all"
-            onClick={handleImageClick}
-          >
-            <ProgressiveImage
-              src={imageUrl}
-              alt={project.title || 'Comparison'}
-              className="w-full h-full object-cover"
-              priority={false}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <Eye className="h-4 w-4" />
-                <span>{project.viewCount}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>{formatDate(project.createdAt)}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {project.isPrivate ? (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Lock className="h-3 w-3" />
-                  Private
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Globe className="h-3 w-3" />
-                  Public
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  })
 
   if (unauthorized) {
     return (
@@ -389,55 +271,69 @@ export default function GalleryPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="mb-8">
+      <div className="mb-10">
         <div className="flex items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Gallery</h1>
-            <p className="text-muted-foreground mt-2">Manage your image comparisons and shared content</p>
-          </div>
           {refreshing && (
-            <div className="text-xs text-muted-foreground">Refreshing…</div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Updating…</span>
+            </div>
           )}
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="comparisons" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8 h-12 p-1 bg-muted/50 rounded-xl">
+          <TabsTrigger value="comparisons" className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm">
             <ImageIcon className="h-4 w-4" />
-            Comparisons ({comparisons.length})
+            <span className="font-medium">Comparisons</span>
+            <span className="ml-1 text-xs opacity-50 bg-foreground/10 px-1.5 py-0.5 rounded-md">{comparisons.length}</span>
           </TabsTrigger>
-          <TabsTrigger value="shared" className="flex items-center gap-2">
+          <TabsTrigger value="shared" className="flex items-center gap-2 rounded-lg data-[state=active]:shadow-sm">
             <Share2 className="h-4 w-4" />
-            Shared ({sharedImages.length})
+            <span className="font-medium">Shared</span>
+            <span className="ml-1 text-xs opacity-50 bg-foreground/10 px-1.5 py-0.5 rounded-md">{sharedImages.length}</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="comparisons" className="mt-6">
-          {comparisons.length === 0 ? (
-            <div className="text-center py-12">
-              <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No comparisons yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Create your first before/after comparison to get started
+        <TabsContent value="comparisons" className="mt-0 outline-none">
+          {comparisons.length === 0 && !refreshing ? (
+            <div className="text-center py-20 bg-muted/20 border-2 border-dashed border-muted rounded-3xl">
+              <ImageIcon className="h-16 w-16 mx-auto text-muted-foreground/40 mb-4" />
+              <h3 className="text-xl font-bold mb-2">No comparisons yet</h3>
+              <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+                Create your first before/after comparison to showcase your professional edits.
               </p>
-              <Button asChild>
+              <Button asChild size="lg" className="rounded-full shadow-lg shadow-primary/20">
                 <Link href="/apps/screensplit">Create Comparison</Link>
               </Button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {comparisons.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {comparisons.map((project, index) => (
+                  <GalleryCard
+                    key={project.id}
+                    project={project}
+                    prioritize={index < 6}
+                    onPreview={handleOpenImagePreview}
+                    onCopyLink={copyShareLink}
+                    onDownload={downloadImage}
+                    onShareSettings={handleOpenShareDialog}
+                    onDelete={handleOpenDeleteDialog}
+                    formatDate={formatDate}
+                  />
                 ))}
               </div>
               {hasMore && (
-                <div ref={loadMoreRef} className="py-6 text-center text-xs text-muted-foreground">
+                <div ref={loadMoreRef} className="py-12 text-center">
                   {loadingMore ? (
-                    <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Loading…</span>
+                    <div className="inline-flex items-center gap-3 bg-secondary px-4 py-2 rounded-full border border-border shadow-sm">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <span className="font-medium text-sm italic">Loading more high-res previews…</span>
+                    </div>
                   ) : (
-                    <span>Scroll to load more…</span>
+                    <div className="h-1 w-full" />
                   )}
                 </div>
               )}
@@ -445,31 +341,41 @@ export default function GalleryPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="shared" className="mt-6">
-          {sharedImages.length === 0 ? (
-            <div className="text-center py-12">
-              <Share2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No shared images yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Share your comparisons to make them appear here
+        <TabsContent value="shared" className="mt-0 outline-none">
+          {sharedImages.length === 0 && !refreshing ? (
+            <div className="text-center py-20 bg-muted/20 border-2 border-dashed border-muted rounded-3xl">
+              <Share2 className="h-16 w-16 mx-auto text-muted-foreground/40 mb-4" />
+              <h3 className="text-xl font-bold mb-2">No shared images yet</h3>
+              <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+                Share your comparisons to build your professional public portfolio.
               </p>
-              <Button asChild>
+              <Button asChild size="lg" className="rounded-full shadow-lg shadow-primary/20">
                 <Link href="/apps/screensplit">Create & Share</Link>
               </Button>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sharedImages.map((project) => (
-                  <ProjectCard key={project.id} project={project} />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {sharedImages.map((project, index) => (
+                  <GalleryCard
+                    key={project.id}
+                    project={project}
+                    prioritize={index < 6}
+                    onPreview={handleOpenImagePreview}
+                    onCopyLink={copyShareLink}
+                    onDownload={downloadImage}
+                    onShareSettings={handleOpenShareDialog}
+                    onDelete={handleOpenDeleteDialog}
+                    formatDate={formatDate}
+                  />
                 ))}
               </div>
               {hasMore && (
-                <div ref={loadMoreRef} className="py-6 text-center text-xs text-muted-foreground">
+                <div ref={loadMoreRef} className="py-12 text-center text-xs text-muted-foreground">
                   {loadingMore ? (
-                    <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Loading…</span>
+                    <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span>
                   ) : (
-                    <span>Scroll to load more…</span>
+                    <div className="h-1" />
                   )}
                 </div>
               )}
@@ -482,65 +388,96 @@ export default function GalleryPage() {
       {previewProject && (
         <Dialog open={imagePreviewOpen} onOpenChange={(open) => {
           setImagePreviewOpen(open)
-          if (!open) setStickyImage(false) // Reset sticky state when dialog closes
+          if (!open) {
+            setStickyImage(false)
+            setPreviewProject(null)
+          }
         }}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6 rounded-3xl border-muted/50 shadow-2xl">
+            <DialogHeader className="mb-4">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <DialogTitle>{previewProject.title || 'Untitled Comparison'}</DialogTitle>
-                  <DialogDescription>
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="text-2xl font-bold truncate">
+                    {previewProject.title || 'Untitled Comparison'}
+                  </DialogTitle>
+                  <DialogDescription className="text-base">
                     {previewProject.beforeLabel} vs {previewProject.afterLabel}
                   </DialogDescription>
                 </div>
-                {/* Sticky Image Toggle - Mobile Only */}
-                <div className="flex items-center gap-2 md:hidden">
-                  <Switch
-                    id="sticky-image"
-                    checked={stickyImage}
-                    onCheckedChange={setStickyImage}
-                  />
-                  <Label htmlFor="sticky-image" className="text-xs cursor-pointer whitespace-nowrap">
-                    Sticky
-                  </Label>
+                <div className="flex items-center gap-3 md:hidden">
+                  <div className="flex items-center gap-2 bg-secondary/50 px-2 py-1 rounded-full border border-border">
+                    <Switch
+                      id="sticky-image"
+                      checked={stickyImage}
+                      onCheckedChange={setStickyImage}
+                      className="scale-90"
+                    />
+                    <Label htmlFor="sticky-image" className="text-[10px] font-bold uppercase tracking-tight cursor-pointer whitespace-nowrap">
+                      Sticky
+                    </Label>
+                  </div>
                 </div>
               </div>
             </DialogHeader>
-            <div className={`relative w-full rounded-lg overflow-hidden min-h-[400px] ${
-              stickyImage ? 'md:relative sticky top-0 z-50 bg-background' : ''
-            }`}>
-              <ProgressiveImage
-                src={`/api/i/${previewProject.shareSlug}`}
-                alt={previewProject.title || 'Comparison'}
-                className="w-full h-auto"
-                priority={true}
+
+            <div className={cn(
+              "relative flex-1 rounded-2xl overflow-hidden bg-muted/30 border border-muted/50 group shadow-inner min-h-[300px]",
+              stickyImage ? 'md:relative sticky top-0 z-50' : ''
+            )}>
+              {/* Skeleton/Loader */}
+              {!previewLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center z-10 transition-opacity bg-muted">
+                  <Skeleton className="w-full h-full" />
+                  <div className="absolute flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary opacity-50" />
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest animate-pulse">Rendering full-res</p>
+                  </div>
+                </div>
+              )}
+
+              <Image
+                src={previewImageUrl}
+                alt={previewProject.title || "Comparison"}
+                fill
+                className={cn(
+                  "object-contain transition-all duration-700 ease-in-out",
+                  previewLoaded ? "opacity-100 scale-100" : "opacity-0 scale-105"
+                )}
+                onLoad={() => setPreviewLoaded(true)}
+                priority
+                unoptimized
               />
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <div className="flex gap-2 w-full sm:w-auto">
+
+            <DialogFooter className="mt-6 flex-col sm:flex-row gap-3 pt-4 border-t border-muted/30">
+              <div className="flex gap-3 w-full sm:w-auto">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     copyShareLink(previewProject)
-                    setImagePreviewOpen(false)
                   }}
-                  className="flex-1 sm:flex-none"
+                  className="flex-1 sm:flex-none rounded-full px-6 transition-all hover:bg-secondary/80 border-border"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Copy Link
                 </Button>
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     downloadImage(previewProject)
                   }}
-                  className="flex-1 sm:flex-none"
+                  className="flex-1 sm:flex-none rounded-full px-6 transition-all hover:bg-secondary/80 border-border"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
               </div>
-              <Button onClick={() => setImagePreviewOpen(false)}>Close</Button>
+              <Button
+                onClick={() => setImagePreviewOpen(false)}
+                className="rounded-full px-8 shadow-lg shadow-primary/10"
+              >
+                Close
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -548,21 +485,28 @@ export default function GalleryPage() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-3xl max-w-md border-muted/50">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{projectToDelete?.title || 'this project'}"? This action cannot be undone and will permanently remove the project and all associated data.
+            <AlertDialogTitle className="text-xl font-bold">Delete Project?</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Are you sure you want to delete <span className="font-bold text-foreground">"{projectToDelete?.title || 'this project'}"</span>?
+              <br /><br />
+              This action cannot be undone and will permanently remove the project and all associated data.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel disabled={isDeleting} className="rounded-full px-6">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-full px-8 shadow-lg shadow-destructive/10"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </span>
+              ) : 'Confirm Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

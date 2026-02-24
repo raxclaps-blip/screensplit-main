@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Download, ImageUp, Loader2, Type } from "lucide-react"
 import { toast } from "sonner"
+import { authClient } from "@/lib/auth-client"
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = text.trim().split(/\s+/)
@@ -55,12 +56,144 @@ function hexToRgba(value: string, alpha = 1, fallback = "#ffffff") {
   return `rgba(${r},${g},${b},${safeAlpha})`
 }
 
+type BrandColorPreset = {
+  id: string
+  name: string
+  allTextColor: string
+  headlineTextColor: string
+  sublineTextColor: string
+  linkTextColor: string
+  bottomRightTextColor: string
+}
+
+type LogoPosition = "top-right" | "top-left" | "bottom-center"
+type DesignerExportFormat = "png" | "jpg" | "webp" | "avif"
+
+type DesignerExportOption = {
+  id: DesignerExportFormat
+  label: string
+  description: string
+  mimeType: string
+  extension: string
+  quality?: number
+}
+
+const DESIGNER_EXPORT_OPTIONS: DesignerExportOption[] = [
+  {
+    id: "png",
+    label: "PNG",
+    description: "Lossless, best for crisp graphics and text",
+    mimeType: "image/png",
+    extension: "png",
+  },
+  {
+    id: "jpg",
+    label: "JPG",
+    description: "Smaller files, ideal for photo-heavy content",
+    mimeType: "image/jpeg",
+    extension: "jpg",
+    quality: 0.92,
+  },
+  {
+    id: "webp",
+    label: "WEBP",
+    description: "Modern compression with strong quality-to-size balance",
+    mimeType: "image/webp",
+    extension: "webp",
+    quality: 0.92,
+  },
+  {
+    id: "avif",
+    label: "AVIF",
+    description: "Next-gen high compression for smallest web payloads",
+    mimeType: "image/avif",
+    extension: "avif",
+    quality: 0.9,
+  },
+]
+
+const DEFAULT_DESIGNER_EXPORT_FORMAT: DesignerExportFormat = "png"
+
+const BRAND_COLOR_PRESETS: BrandColorPreset[] = [
+  {
+    id: "clean-white",
+    name: "Clean White",
+    allTextColor: "#ffffff",
+    headlineTextColor: "#ffffff",
+    sublineTextColor: "#f3f4f6",
+    linkTextColor: "#e5e7eb",
+    bottomRightTextColor: "#ffffff",
+  },
+  {
+    id: "ocean-brand",
+    name: "Ocean Brand",
+    allTextColor: "#38bdf8",
+    headlineTextColor: "#38bdf8",
+    sublineTextColor: "#0ea5e9",
+    linkTextColor: "#22d3ee",
+    bottomRightTextColor: "#7dd3fc",
+  },
+  {
+    id: "sunset-brand",
+    name: "Sunset Brand",
+    allTextColor: "#fb7185",
+    headlineTextColor: "#fb7185",
+    sublineTextColor: "#f97316",
+    linkTextColor: "#fbbf24",
+    bottomRightTextColor: "#fdba74",
+  },
+  {
+    id: "mint-brand",
+    name: "Mint Brand",
+    allTextColor: "#34d399",
+    headlineTextColor: "#34d399",
+    sublineTextColor: "#10b981",
+    linkTextColor: "#2dd4bf",
+    bottomRightTextColor: "#6ee7b7",
+  },
+  {
+    id: "coral-brand",
+    name: "Coral Brand",
+    allTextColor: "#f43f5e",
+    headlineTextColor: "#fb7185",
+    sublineTextColor: "#f43f5e",
+    linkTextColor: "#f472b6",
+    bottomRightTextColor: "#fda4af",
+  },
+  {
+    id: "gold-luxe",
+    name: "Gold Luxe",
+    allTextColor: "#f59e0b",
+    headlineTextColor: "#f59e0b",
+    sublineTextColor: "#eab308",
+    linkTextColor: "#facc15",
+    bottomRightTextColor: "#fcd34d",
+  },
+]
+
+const MAX_LOGO_FILE_SIZE_BYTES = 2 * 1024 * 1024
+const ALLOWED_LOGO_MIME_TYPES = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/svg+xml",
+])
+
 export default function DesignerPage() {
+  const { data: session } = authClient.useSession()
+  const desktopExportMenuRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const headlineRef = useRef<HTMLTextAreaElement>(null)
+  const sublineRef = useRef<HTMLTextAreaElement>(null)
   const objectUrlRef = useRef<string | null>(null)
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
+  const [logoUrl, setLogoUrl] = useState("")
+  const [logoImageElement, setLogoImageElement] = useState<HTMLImageElement | null>(null)
   const [showHeadline, setShowHeadline] = useState(true)
+  const [showSubline, setShowSubline] = useState(true)
   const [headline, setHeadline] = useState("Write your message here")
   const [subline, setSubline] = useState("Your image stays clean on top while text remains readable below.")
   const [bottomMode, setBottomMode] = useState<"fade" | "blackout">("fade")
@@ -73,8 +206,18 @@ export default function DesignerPage() {
   const [bottomRightHistory, setBottomRightHistory] = useState<string[]>([])
   const [isDesignerTextLoading, setIsDesignerTextLoading] = useState(true)
   const [isDesignerTextSaving, setIsDesignerTextSaving] = useState(false)
+  const [isLogoLoading, setIsLogoLoading] = useState(true)
+  const [isLogoUploading, setIsLogoUploading] = useState(false)
+  const [isLogoRemoving, setIsLogoRemoving] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [activeExportFormat, setActiveExportFormat] = useState<DesignerExportFormat | null>(null)
+  const [mobileExportSheetOpen, setMobileExportSheetOpen] = useState(false)
+  const [desktopExportMenuOpen, setDesktopExportMenuOpen] = useState(false)
+  const [isMobileAccountMenuOpen, setIsMobileAccountMenuOpen] = useState(false)
   const [headlineScale, setHeadlineScale] = useState([7])
+  const [showLogo, setShowLogo] = useState(true)
+  const [logoSize, setLogoSize] = useState([100])
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right")
   const [bottomOffset, setBottomOffset] = useState([6])
   const [useUnifiedTextColor, setUseUnifiedTextColor] = useState(true)
   const [allTextColor, setAllTextColor] = useState("#ffffff")
@@ -84,6 +227,68 @@ export default function DesignerPage() {
   const [bottomRightTextColor, setBottomRightTextColor] = useState("#ffffff")
   const isBottomFadeMode = bottomMode === "fade"
   const isBelowImageBlackoutMode = bottomMode === "blackout"
+  const userName = session?.user?.name?.trim() || ""
+  const bottomRightTextPlaceholder = bottomRightText.length > 0 ? "" : userName || "Your name"
+  const normalizedAllTextColor = normalizeHexColor(allTextColor, "#ffffff")
+  const normalizedHeadlineTextColor = normalizeHexColor(headlineTextColor, "#ffffff")
+  const normalizedSublineTextColor = normalizeHexColor(sublineTextColor, "#ffffff")
+  const normalizedLinkTextColor = normalizeHexColor(linkTextColor, "#ffffff")
+  const normalizedBottomRightTextColor = normalizeHexColor(bottomRightTextColor, "#ffffff")
+  const activeExportOption =
+    DESIGNER_EXPORT_OPTIONS.find((option) => option.id === activeExportFormat) ?? null
+  const shouldShowMobileExportButton = Boolean(imageElement) && !isMobileAccountMenuOpen
+  const shouldShowDesktopExportButton = Boolean(imageElement)
+
+  const applyBrandColorPreset = useCallback((preset: BrandColorPreset) => {
+    setAllTextColor(preset.allTextColor)
+    setHeadlineTextColor(preset.headlineTextColor)
+    setSublineTextColor(preset.sublineTextColor)
+    setLinkTextColor(preset.linkTextColor)
+    setBottomRightTextColor(preset.bottomRightTextColor)
+  }, [])
+
+  const autoResizeTextarea = useCallback((textarea: HTMLTextAreaElement | null) => {
+    if (!textarea) return
+    textarea.style.height = "0px"
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [])
+
+  useEffect(() => {
+    autoResizeTextarea(headlineRef.current)
+  }, [headline, showHeadline, autoResizeTextarea])
+
+  useEffect(() => {
+    autoResizeTextarea(sublineRef.current)
+  }, [subline, showSubline, autoResizeTextarea])
+
+  useEffect(() => {
+    if (!logoUrl) {
+      setLogoImageElement(null)
+      return
+    }
+
+    let isMounted = true
+    const logo = new Image()
+
+    logo.onload = () => {
+      if (isMounted) {
+        setLogoImageElement(logo)
+      }
+    }
+
+    logo.onerror = () => {
+      if (isMounted) {
+        setLogoImageElement(null)
+        toast.error("Failed to load saved logo")
+      }
+    }
+
+    logo.src = logoUrl
+
+    return () => {
+      isMounted = false
+    }
+  }, [logoUrl])
 
   const clearImage = useCallback(() => {
     if (objectUrlRef.current) {
@@ -118,6 +323,7 @@ export default function DesignerPage() {
     const pillHeight = commentFontSize + pillPaddingY * 2
     const footerReserve = pillHeight + commentBottomInset + Math.max(8, Math.round(commentFontSize * 0.25))
     const bottomRightTextTrimmed = bottomRightText.trim()
+    const bottomRightTextToRender = bottomRightTextTrimmed || userName
     const sharedTextColor = normalizeHexColor(allTextColor, "#ffffff")
     const resolvedHeadlineTextColor = useUnifiedTextColor
       ? sharedTextColor
@@ -133,7 +339,7 @@ export default function DesignerPage() {
       : normalizeHexColor(bottomRightTextColor, sharedTextColor)
 
     ctx.font = `500 ${subtitleSizePx}px ui-sans-serif, system-ui, -apple-system`
-    const subtitleLines = subline.trim() ? wrapLines(ctx, subline, textMaxWidth) : []
+    const subtitleLines = showSubline && subline.trim() ? wrapLines(ctx, subline, textMaxWidth) : []
     const subtitleBlockHeight = subtitleLines.length * subtitleLineHeight
 
     ctx.font = `700 ${titleSizePx}px ui-sans-serif, system-ui, -apple-system`
@@ -168,12 +374,6 @@ export default function DesignerPage() {
 
     if (imageElement) {
       ctx.drawImage(imageElement, 0, 0, width, imageHeight)
-    } else {
-      const placeholderGradient = ctx.createLinearGradient(0, 0, width, imageHeight)
-      placeholderGradient.addColorStop(0, "#1f2937")
-      placeholderGradient.addColorStop(1, "#0b1220")
-      ctx.fillStyle = placeholderGradient
-      ctx.fillRect(0, 0, width, imageHeight)
     }
 
     if (belowBlackoutPx > 0) {
@@ -237,6 +437,37 @@ export default function DesignerPage() {
       bottomFadeGradient.addColorStop(1, "rgba(0,0,0,0)")
       ctx.fillStyle = bottomFadeGradient
       ctx.fillRect(0, fadeTop, width, fadePx)
+    }
+
+    if (showLogo && logoImageElement && logoPosition !== "bottom-center") {
+      const logoSourceWidth = Math.max(1, logoImageElement.naturalWidth || logoImageElement.width || 1)
+      const logoSourceHeight = Math.max(1, logoImageElement.naturalHeight || logoImageElement.height || 1)
+      const defaultLogoScale = Math.min((width * 0.2) / logoSourceWidth, (imageHeight * 0.14) / logoSourceHeight, 1)
+      const logoScaleFactor = logoSize[0] / 100
+      const logoScale = Math.max(0.12, Math.min(4, defaultLogoScale * logoScaleFactor))
+      const logoWidth = Math.max(1, Math.round(logoSourceWidth * logoScale))
+      const logoHeight = Math.max(1, Math.round(logoSourceHeight * logoScale))
+      const logoPadding = Math.max(6, Math.round(logoHeight * 0.12))
+      const logoContainerWidth = logoWidth + logoPadding * 2
+      const logoContainerHeight = logoHeight + logoPadding * 2
+      const logoX = logoPosition === "top-left"
+        ? safePaddingX
+        : width - safePaddingX - logoContainerWidth
+      const logoY = Math.max(12, Math.round(imageHeight * 0.035))
+
+      ctx.save()
+      ctx.shadowColor = "rgba(0,0,0,0.38)"
+      ctx.shadowBlur = Math.round(logoPadding * 1.8)
+      ctx.shadowOffsetY = 2
+      ctx.fillStyle = "rgba(8,8,8,0.44)"
+      ctx.fillRect(logoX, logoY, logoContainerWidth, logoContainerHeight)
+      ctx.strokeStyle = "rgba(255,255,255,0.2)"
+      ctx.lineWidth = 1
+      ctx.strokeRect(logoX, logoY, logoContainerWidth, logoContainerHeight)
+      ctx.shadowBlur = 0
+      ctx.shadowOffsetY = 0
+      ctx.drawImage(logoImageElement, logoX + logoPadding, logoY + logoPadding, logoWidth, logoHeight)
+      ctx.restore()
     }
 
     const textAreaHeight = blackoutModeActive ? belowBlackoutPx : imageHeight
@@ -322,7 +553,7 @@ export default function DesignerPage() {
     ctx.textBaseline = "middle"
 
     const linkIcon = "\u{1F517}"
-    const linkLabel = "Link In comments"
+    const linkLabel = "Link in comments"
     const labelGap = Math.max(6, Math.round(commentFontSize * 0.32))
     ctx.font = `${commentFontSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", ui-sans-serif, system-ui`
     const iconWidth = ctx.measureText(linkIcon).width
@@ -346,10 +577,13 @@ export default function DesignerPage() {
     ctx.font = `600 ${commentFontSize}px ui-sans-serif, system-ui, -apple-system`
     ctx.fillText(linkLabel, linkTextX, footerCenterY)
 
-    if (bottomRightTextTrimmed) {
+    let rightPillX: number | null = null
+    let rightPillWidth = 0
+
+    if (bottomRightTextToRender) {
       const rightTextFont = `600 ${commentFontSize}px ui-sans-serif, system-ui, -apple-system`
       ctx.font = rightTextFont
-      let rightText = bottomRightTextTrimmed
+      let rightText = bottomRightTextToRender
       const maxRightTextWidth = Math.max(
         0,
         width - safePaddingX * 2 - leftPillWidth - pillsGap - pillPaddingX * 2
@@ -365,8 +599,8 @@ export default function DesignerPage() {
 
       if (rightText) {
         const rightTextWidth = ctx.measureText(rightText).width
-        const rightPillWidth = Math.round(pillPaddingX * 2 + rightTextWidth)
-        const rightPillX = width - safePaddingX - rightPillWidth
+        rightPillWidth = Math.round(pillPaddingX * 2 + rightTextWidth)
+        rightPillX = width - safePaddingX - rightPillWidth
 
         drawPill(rightPillX, footerTop, rightPillWidth, pillHeight, pillRadius)
         ctx.fillStyle = "rgba(10,10,10,0.68)"
@@ -377,6 +611,43 @@ export default function DesignerPage() {
 
         ctx.fillStyle = hexToRgba(resolvedBottomRightTextColor, 0.98, sharedTextColor)
         ctx.fillText(rightText, rightPillX + pillPaddingX, footerCenterY)
+      }
+    }
+
+    if (showLogo && logoImageElement && logoPosition === "bottom-center") {
+      const logoSourceWidth = Math.max(1, logoImageElement.naturalWidth || logoImageElement.width || 1)
+      const logoSourceHeight = Math.max(1, logoImageElement.naturalHeight || logoImageElement.height || 1)
+      const gapLeft = leftPillX + leftPillWidth + pillsGap
+      const gapRight = rightPillX !== null ? rightPillX - pillsGap : width - safePaddingX
+      const availableWidth = Math.max(0, gapRight - gapLeft)
+      const availableHeight = Math.max(0, pillHeight)
+
+      if (availableWidth > 16 && availableHeight > 8) {
+        const fitWidth = Math.max(1, availableWidth - 8)
+        const fitHeight = Math.max(1, availableHeight - 4)
+        const baseFitScale = Math.min(fitWidth / logoSourceWidth, fitHeight / logoSourceHeight, 1)
+        const requestedScale = baseFitScale * (logoSize[0] / 100)
+        const logoScale = Math.max(
+          0.02,
+          Math.min(requestedScale, fitWidth / logoSourceWidth, fitHeight / logoSourceHeight)
+        )
+
+        const logoWidth = Math.max(1, Math.round(logoSourceWidth * logoScale))
+        const logoHeight = Math.max(1, Math.round(logoSourceHeight * logoScale))
+        const logoPadding = Math.max(2, Math.round(Math.min(logoWidth, logoHeight) * 0.08))
+        const containerWidth = logoWidth + logoPadding * 2
+        const containerHeight = logoHeight + logoPadding * 2
+        const logoX = gapLeft + Math.round((availableWidth - containerWidth) / 2)
+        const logoY = footerTop + Math.round((pillHeight - containerHeight) / 2)
+
+        ctx.save()
+        ctx.fillStyle = "rgba(8,8,8,0.44)"
+        ctx.fillRect(logoX, logoY, containerWidth, containerHeight)
+        ctx.strokeStyle = "rgba(255,255,255,0.2)"
+        ctx.lineWidth = 1
+        ctx.strokeRect(logoX, logoY, containerWidth, containerHeight)
+        ctx.drawImage(logoImageElement, logoX + logoPadding, logoY + logoPadding, logoWidth, logoHeight)
+        ctx.restore()
       }
     }
 
@@ -400,11 +671,17 @@ export default function DesignerPage() {
     headlineScale,
     headlineTextColor,
     imageElement,
+    logoImageElement,
+    showLogo,
+    logoSize,
+    logoPosition,
     isBelowImageBlackoutMode,
     isBottomFadeMode,
     linkTextColor,
     allTextColor,
     bottomRightTextColor,
+    userName,
+    showSubline,
     showHeadline,
     sublineTextColor,
     subline,
@@ -457,6 +734,41 @@ export default function DesignerPage() {
   }, [])
 
   useEffect(() => {
+    let isMounted = true
+
+    const loadDesignerLogo = async () => {
+      setIsLogoLoading(true)
+      try {
+        const response = await fetch("/api/user/designer-logo")
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to load saved logo")
+        }
+
+        if (!isMounted) return
+        const savedLogoUrl = typeof data.logoUrl === "string" ? data.logoUrl : ""
+        setLogoUrl(savedLogoUrl)
+        setShowLogo(Boolean(savedLogoUrl))
+      } catch (error) {
+        if (isMounted) {
+          toast.error("Failed to load saved logo")
+        }
+      } finally {
+        if (isMounted) {
+          setIsLogoLoading(false)
+        }
+      }
+    }
+
+    loadDesignerLogo()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
     if (!isBelowImageBlackoutMode) return
 
     if (belowImageBlackout[0] === 0) {
@@ -465,6 +777,60 @@ export default function DesignerPage() {
   }, [belowImageBlackout, isBelowImageBlackoutMode])
 
   useEffect(() => () => clearImage(), [clearImage])
+
+  useEffect(() => {
+    if (!mobileExportSheetOpen && !desktopExportMenuOpen) return
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileExportSheetOpen(false)
+        setDesktopExportMenuOpen(false)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [mobileExportSheetOpen, desktopExportMenuOpen])
+
+  useEffect(() => {
+    if (!desktopExportMenuOpen) return
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null
+      if (target && desktopExportMenuRef.current?.contains(target)) return
+      setDesktopExportMenuOpen(false)
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("touchstart", handlePointerDown)
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("touchstart", handlePointerDown)
+    }
+  }, [desktopExportMenuOpen])
+
+  useEffect(() => {
+    const syncAccountMenuState = () => {
+      setIsMobileAccountMenuOpen(document.documentElement.dataset.mobileAccountOpen === "true")
+    }
+
+    syncAccountMenuState()
+    window.addEventListener("mobile-account-menu-change", syncAccountMenuState as EventListener)
+    return () => {
+      window.removeEventListener("mobile-account-menu-change", syncAccountMenuState as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!imageElement || isMobileAccountMenuOpen) {
+      setMobileExportSheetOpen(false)
+    }
+    if (!imageElement) {
+      setDesktopExportMenuOpen(false)
+    }
+  }, [imageElement, isMobileAccountMenuOpen])
 
   const saveBottomRightText = useCallback(async () => {
     if (isDesignerTextSaving) return
@@ -502,6 +868,91 @@ export default function DesignerPage() {
     }
   }, [bottomRightText, isDesignerTextSaving])
 
+  const readFileAsDataUrl = useCallback((file: File) => {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result !== "string") {
+          reject(new Error("Failed to process the selected image"))
+          return
+        }
+        resolve(reader.result)
+      }
+      reader.onerror = () => reject(new Error("Failed to read the selected image"))
+      reader.readAsDataURL(file)
+    })
+  }, [])
+
+  const handleLogoFileInput = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+
+    if (!file) return
+    if (!ALLOWED_LOGO_MIME_TYPES.has(file.type.toLowerCase())) {
+      toast.error("Please upload PNG, JPG, WEBP, or SVG")
+      return
+    }
+    if (file.size > MAX_LOGO_FILE_SIZE_BYTES) {
+      toast.error("Logo file must be 2MB or smaller")
+      return
+    }
+
+    setIsLogoUploading(true)
+    try {
+      const logoDataUrl = await readFileAsDataUrl(file)
+      const response = await fetch("/api/user/designer-logo", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          logoDataUrl,
+        }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save logo")
+      }
+
+      const savedLogoUrl = typeof data.logoUrl === "string" ? data.logoUrl : ""
+      setLogoUrl(savedLogoUrl)
+      setShowLogo(Boolean(savedLogoUrl))
+      toast.success("Logo saved for future designs")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save logo")
+    } finally {
+      setIsLogoUploading(false)
+    }
+  }, [readFileAsDataUrl])
+
+  const removeSavedLogo = useCallback(async () => {
+    if (isLogoRemoving) return
+
+    setIsLogoRemoving(true)
+    try {
+      const response = await fetch("/api/user/designer-logo", {
+        method: "DELETE",
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(typeof data?.error === "string" ? data.error : "Failed to remove logo")
+      }
+
+      setLogoUrl("")
+      setLogoImageElement(null)
+      setShowLogo(false)
+      if (logoInputRef.current) {
+        logoInputRef.current.value = ""
+      }
+      toast.success("Logo removed")
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove logo")
+    } finally {
+      setIsLogoRemoving(false)
+    }
+  }, [isLogoRemoving])
+
   const loadFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload a valid image file")
@@ -536,21 +987,45 @@ export default function DesignerPage() {
     if (file) loadFile(file)
   }
 
-  const downloadCanvas = useCallback(async () => {
+  const exportCanvas = useCallback(async (format: DesignerExportFormat = DEFAULT_DESIGNER_EXPORT_FORMAT) => {
     if (isExporting) return
     const canvas = canvasRef.current
     if (!canvas) return
 
-    const toastId = toast.loading("Exporting and saving to cloud...")
+    const formatOption =
+      DESIGNER_EXPORT_OPTIONS.find((option) => option.id === format) ??
+      DESIGNER_EXPORT_OPTIONS[0]
+
+    const toastId = toast.loading(`Exporting ${formatOption.label} and saving to cloud...`)
     setIsExporting(true)
+    setActiveExportFormat(formatOption.id)
+    setMobileExportSheetOpen(false)
+    setDesktopExportMenuOpen(false)
 
     try {
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"))
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, formatOption.mimeType, formatOption.quality)
+      )
       if (!blob) {
-        throw new Error("Could not export the design")
+        throw new Error(`Could not export the design as ${formatOption.label}`)
       }
 
-      const imageDataUrl = canvas.toDataURL("image/png")
+      const imageDataUrl =
+        typeof formatOption.quality === "number"
+          ? canvas.toDataURL(formatOption.mimeType, formatOption.quality)
+          : canvas.toDataURL(formatOption.mimeType)
+
+      const normalizedMimeType = formatOption.mimeType.toLowerCase()
+      const normalizedBlobType = blob.type.toLowerCase()
+      const requestedNonPngFormat = formatOption.id !== "png"
+      const dataUrlMatchesFormat = imageDataUrl.startsWith(`data:${normalizedMimeType}`)
+      const blobMatchesFormat =
+        normalizedBlobType.length === 0 || normalizedBlobType === normalizedMimeType
+
+      if (requestedNonPngFormat && (!dataUrlMatchesFormat || !blobMatchesFormat)) {
+        throw new Error(`${formatOption.label} export is not supported by this browser`)
+      }
+
       const exportTitle = (showHeadline && headline.trim() ? headline.trim() : "Designer Export").slice(0, 120)
 
       const response = await fetch("/api/upload-image", {
@@ -564,7 +1039,7 @@ export default function DesignerPage() {
           layout: "horizontal",
           beforeLabel: "Designer",
           afterLabel: "Export",
-          exportFormat: "png",
+          exportFormat: formatOption.extension,
           textColor: useUnifiedTextColor ? allTextColor : headlineTextColor,
           bgColor: "#000000",
           isPrivate: false,
@@ -583,28 +1058,29 @@ export default function DesignerPage() {
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = "designer-output.png"
+      link.download = `designer-output.${formatOption.extension}`
       link.click()
       URL.revokeObjectURL(url)
 
-      toast.success("Exported and saved to cloud", {
+      toast.success(`Exported as ${formatOption.label} and saved to cloud`, {
         id: toastId,
         description:
           typeof data?.shareSlug === "string" && data.shareSlug.length > 0
             ? `Saved to Gallery. Share URL: /share/${data.shareSlug}`
-            : "Saved to Gallery and downloaded as PNG.",
+            : `Saved to Gallery and downloaded as ${formatOption.label}.`,
       })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Export failed", { id: toastId })
     } finally {
       setIsExporting(false)
+      setActiveExportFormat(null)
     }
   }, [allTextColor, headline, headlineTextColor, isExporting, showHeadline, useUnifiedTextColor])
 
   return (
     <div className="w-full px-4 pt-10 pb-28 sm:px-6 lg:px-8 xl:pb-10">
       <div className="grid gap-6">
-        <Card className="order-2 h-fit space-y-2.5 p-3 xl:fixed xl:right-0 xl:top-16 xl:z-20 xl:h-[calc(100vh-4rem)] xl:w-[360px] xl:overflow-y-auto xl:rounded-none xl:border-l xl:border-r-0 xl:border-t-0 xl:border-b-0 xl:bg-background [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <Card className="order-2 h-fit space-y-2.5 p-3 xl:fixed xl:right-0 xl:top-16 xl:z-20 xl:h-[calc(100vh-4rem)] xl:w-[360px] xl:overflow-y-auto xl:rounded-none xl:border-l xl:border-r-0 xl:border-t-0 xl:border-b-0 xl:bg-card [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="rounded-xl border border-border bg-muted/20 p-3">
             <div className="mb-2">
               <p className="text-sm font-semibold">Output Mode</p>
@@ -614,11 +1090,10 @@ export default function DesignerPage() {
               <button
                 type="button"
                 onClick={() => setBottomMode("fade")}
-                className={`rounded-lg border p-2 text-left transition-colors ${
-                  isBottomFadeMode
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border bg-background hover:bg-muted"
-                }`}
+                className={`rounded-lg border p-2 text-left transition-colors ${isBottomFadeMode
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background hover:bg-muted"
+                  }`}
               >
                 <p className="text-sm font-medium">Bottom Fade</p>
                 <p className={`text-[11px] ${isBottomFadeMode ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
@@ -628,11 +1103,10 @@ export default function DesignerPage() {
               <button
                 type="button"
                 onClick={() => setBottomMode("blackout")}
-                className={`rounded-lg border p-2 text-left transition-colors ${
-                  isBelowImageBlackoutMode
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border bg-background hover:bg-muted"
-                }`}
+                className={`rounded-lg border p-2 text-left transition-colors ${isBelowImageBlackoutMode
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background hover:bg-muted"
+                  }`}
               >
                 <p className="text-sm font-medium">Blackout</p>
                 <p className={`text-[11px] ${isBelowImageBlackoutMode ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
@@ -657,21 +1131,39 @@ export default function DesignerPage() {
             </div>
             <Textarea
               id="headline"
+              ref={headlineRef}
+              rows={1}
               value={headline}
-              onChange={(event) => setHeadline(event.target.value)}
+              onChange={(event) => {
+                setHeadline(event.target.value)
+              }}
               placeholder="Write your headline"
-              className="min-h-[84px]"
+              className="min-h-0 resize-none overflow-hidden"
               disabled={!showHeadline}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subline">Subline</Label>
-            <Input
+            <div className="flex items-center justify-between">
+              <Label htmlFor="subline">Subline</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="show-subline" className="cursor-pointer text-xs text-muted-foreground">
+                  Show
+                </Label>
+                <Switch id="show-subline" checked={showSubline} onCheckedChange={setShowSubline} />
+              </div>
+            </div>
+            <Textarea
               id="subline"
+              ref={sublineRef}
+              rows={1}
               value={subline}
-              onChange={(event) => setSubline(event.target.value)}
+              onChange={(event) => {
+                setSubline(event.target.value)
+              }}
               placeholder="Optional supporting text"
+              className="min-h-0 resize-none overflow-hidden"
+              disabled={!showSubline}
             />
           </div>
 
@@ -699,7 +1191,7 @@ export default function DesignerPage() {
               id="bottom-right-text"
               value={bottomRightText}
               onChange={(event) => setBottomRightText(event.target.value)}
-              placeholder="Type bottom-right text"
+              placeholder={bottomRightTextPlaceholder}
               maxLength={120}
               list="bottom-right-text-history"
               disabled={isDesignerTextLoading}
@@ -730,19 +1222,183 @@ export default function DesignerPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-muted/20 p-3">
+            <div className="mb-2 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Brand Logo</p>
+                <p className="text-xs text-muted-foreground">Upload once and reuse it on future designs.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="show-logo" className="cursor-pointer text-xs text-muted-foreground">
+                  Show
+                </Label>
+                <Switch
+                  id="show-logo"
+                  checked={showLogo}
+                  onCheckedChange={setShowLogo}
+                  disabled={!logoUrl}
+                />
+              </div>
+            </div>
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={handleLogoFileInput}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={isLogoLoading || isLogoUploading || isLogoRemoving}
+              >
+                {isLogoUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Uploading
+                  </>
+                ) : logoUrl ? (
+                  "Replace logo"
+                ) : (
+                  "Upload logo"
+                )}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={removeSavedLogo}
+                disabled={!logoUrl || isLogoLoading || isLogoUploading || isLogoRemoving}
+              >
+                {isLogoRemoving ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Removing
+                  </>
+                ) : (
+                  "Remove"
+                )}
+              </Button>
+            </div>
+            {logoUrl ? (
+              <div className="mt-2 rounded-lg border border-border/60 bg-background/70 p-2">
+                <img src={logoUrl} alt="Saved logo preview" className="h-12 w-auto max-w-full object-contain" />
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground">No saved logo yet.</p>
+            )}
+            <div className="mt-2 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <Label>Logo Size</Label>
+                <span className="text-muted-foreground">{logoSize[0]}%</span>
+              </div>
+              <Slider
+                value={logoSize}
+                onValueChange={setLogoSize}
+                min={40}
+                max={240}
+                step={5}
+                disabled={!logoUrl}
+              />
+            </div>
+            <div className="mt-2 space-y-1.5">
+              <Label className="text-xs">Logo Position</Label>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setLogoPosition("top-left")}
+                  disabled={!logoUrl}
+                  className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                    logoPosition === "top-left"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-background hover:bg-muted disabled:opacity-50"
+                  }`}
+                >
+                  Top Left
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogoPosition("top-right")}
+                  disabled={!logoUrl}
+                  className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                    logoPosition === "top-right"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-background hover:bg-muted disabled:opacity-50"
+                  }`}
+                >
+                  Top Right
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLogoPosition("bottom-center")}
+                  disabled={!logoUrl}
+                  className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                    logoPosition === "bottom-center"
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border bg-background hover:bg-muted disabled:opacity-50"
+                  }`}
+                >
+                  Bottom Center
+                </button>
+              </div>
+            </div>
+            <p className="mt-2 text-[11px] text-muted-foreground">PNG, JPG, WEBP, or SVG up to 2MB.</p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-muted/20 p-3">
             <div className="mb-3">
               <p className="text-sm font-semibold">Text Colors</p>
-              <p className="text-xs text-muted-foreground">Use one color for all text or customize each text independently.</p>
+            </div>
+            <div className="mb-3 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">Brand Presets</p>
+                <p className="text-[11px] text-muted-foreground">One-click palettes</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {BRAND_COLOR_PRESETS.map((preset) => {
+                  const isPresetActive = useUnifiedTextColor
+                    ? normalizedAllTextColor === preset.allTextColor
+                    : normalizedHeadlineTextColor === preset.headlineTextColor &&
+                    normalizedSublineTextColor === preset.sublineTextColor &&
+                    normalizedLinkTextColor === preset.linkTextColor &&
+                    normalizedBottomRightTextColor === preset.bottomRightTextColor
+
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyBrandColorPreset(preset)}
+                      className={`rounded-lg border px-2 py-2 text-left transition-colors ${isPresetActive
+                        ? "border-primary bg-primary/10 shadow-sm"
+                        : "border-border bg-background hover:bg-muted"
+                        }`}
+                    >
+                      <div className="mb-1.5 flex items-center gap-1">
+                        {[preset.headlineTextColor, preset.sublineTextColor, preset.linkTextColor, preset.bottomRightTextColor].map((color, index) => (
+                          <span
+                            key={`${preset.id}-${index}`}
+                            className="h-3 w-3 rounded-full border border-white/30"
+                            style={{ backgroundColor: color }}
+                            aria-hidden="true"
+                          />
+                        ))}
+                      </div>
+                      <p className="text-xs font-medium leading-none">{preset.name}</p>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
             <div className="mb-3 grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setUseUnifiedTextColor(true)}
-                className={`rounded-lg border p-2 text-left transition-colors ${
-                  useUnifiedTextColor
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border bg-background hover:bg-muted"
-                }`}
+                className={`rounded-lg border p-2 text-left transition-colors ${useUnifiedTextColor
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background hover:bg-muted"
+                  }`}
               >
                 <p className="text-sm font-medium">Single Color</p>
                 <p className={`text-[11px] ${useUnifiedTextColor ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
@@ -752,11 +1408,10 @@ export default function DesignerPage() {
               <button
                 type="button"
                 onClick={() => setUseUnifiedTextColor(false)}
-                className={`rounded-lg border p-2 text-left transition-colors ${
-                  !useUnifiedTextColor
-                    ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                    : "border-border bg-background hover:bg-muted"
-                }`}
+                className={`rounded-lg border p-2 text-left transition-colors ${!useUnifiedTextColor
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-background hover:bg-muted"
+                  }`}
               >
                 <p className="text-sm font-medium">Per Text</p>
                 <p className={`text-[11px] ${!useUnifiedTextColor ? "text-primary-foreground/90" : "text-muted-foreground"}`}>
@@ -807,7 +1462,7 @@ export default function DesignerPage() {
                   />
                 </div>
                 <div className="grid grid-cols-[1fr_auto] items-center gap-2">
-                  <Label htmlFor="link-text-color" className="text-xs text-muted-foreground">Link In comments</Label>
+                  <Label htmlFor="link-text-color" className="text-xs text-muted-foreground">Link in comments</Label>
                   <Input
                     id="link-text-color"
                     type="color"
@@ -908,19 +1563,6 @@ export default function DesignerPage() {
             </TabsContent>
           </Tabs>
 
-          <Button type="button" onClick={downloadCanvas} disabled={isExporting} className="hidden xl:flex">
-            {isExporting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Exporting...
-              </>
-            ) : (
-              <>
-                <Download className="mr-2 h-4 w-4" />
-                Export PNG
-              </>
-            )}
-          </Button>
         </Card>
 
         <div
@@ -950,7 +1592,7 @@ export default function DesignerPage() {
           </div>
           {!imageElement && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
-              <div className="rounded-xl border border-dashed border-border/80 bg-background/70 px-5 py-4 text-center shadow-sm backdrop-blur-sm">
+              <div className="rounded-xl border border-dashed border-border/80 bg-card/70 px-5 py-4 text-center shadow-sm backdrop-blur-sm">
                 <div className="mb-2 flex items-center justify-center">
                   <ImageUp className="h-5 w-5 text-muted-foreground" />
                 </div>
@@ -961,26 +1603,127 @@ export default function DesignerPage() {
           )}
           <canvas
             ref={canvasRef}
-            className="mx-auto h-auto w-full rounded-xl border border-border bg-black/70 p-3 shadow-2xl"
+            className="mx-auto h-auto w-full rounded-xl border border-border bg-card p-3 shadow-2xl"
           />
         </div>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] backdrop-blur xl:hidden">
-        <Button type="button" onClick={downloadCanvas} disabled={isExporting} className="w-full">
-          {isExporting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Exporting...
-            </>
-          ) : (
-            <>
-              <Download className="mr-2 h-4 w-4" />
-              Export PNG
-            </>
-          )}
-        </Button>
-      </div>
+      {shouldShowMobileExportButton && mobileExportSheetOpen && (
+        <button
+          type="button"
+          aria-label="Close export menu"
+          className="fixed inset-0 z-[58] bg-transparent xl:hidden"
+          onClick={() => setMobileExportSheetOpen(false)}
+        />
+      )}
+
+      {shouldShowMobileExportButton && (
+        <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+6.15rem)] right-4 z-[60] xl:hidden">
+        <div className="relative flex flex-col items-end">
+          <div
+            id="designer-export-sheet"
+            className={`absolute bottom-[calc(100%+0.65rem)] right-0 origin-bottom-right transition-all duration-200 ${
+              mobileExportSheetOpen
+                ? "translate-y-0 opacity-100 pointer-events-auto"
+                : "translate-y-3 opacity-0 pointer-events-none"
+            }`}
+          >
+            <div className="w-12 rounded-2xl border border-primary/80 bg-primary p-1.5 shadow-2xl backdrop-blur">
+              <div className="grid gap-1.5">
+                {DESIGNER_EXPORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => exportCanvas(option.id)}
+                    disabled={isExporting}
+                    className="rounded-md border border-border bg-background px-0 py-1.5 text-center text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-70"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            onClick={() => setMobileExportSheetOpen((previous) => !previous)}
+            disabled={isExporting}
+            size="icon"
+            aria-expanded={mobileExportSheetOpen}
+            aria-controls="designer-export-sheet"
+            aria-label={isExporting ? "Exporting design" : "Open export options"}
+            className="h-12 w-12 rounded-full p-0 shadow-xl"
+          >
+            {isExporting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="sr-only">Exporting design</span>
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                <span className="sr-only">Open export options</span>
+              </>
+            )}
+          </Button>
+        </div>
+        </div>
+      )}
+
+      {shouldShowDesktopExportButton && (
+        <div className="fixed bottom-8 right-[calc(360px+1rem)] z-[60] hidden xl:block">
+          <div ref={desktopExportMenuRef} className="relative flex flex-col items-end">
+            <div
+              id="designer-desktop-export-menu"
+              className={`absolute bottom-[calc(100%+0.65rem)] right-0 origin-bottom-right transition-all duration-200 ${
+                desktopExportMenuOpen
+                  ? "translate-y-0 opacity-100 pointer-events-auto"
+                  : "translate-y-3 opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="w-12 rounded-2xl border border-primary/80 bg-primary p-1.5 shadow-2xl backdrop-blur">
+                <div className="grid gap-1.5">
+                  {DESIGNER_EXPORT_OPTIONS.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => exportCanvas(option.id)}
+                      disabled={isExporting}
+                      className="rounded-md border border-border bg-background px-0 py-1.5 text-center text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-70"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={() => setDesktopExportMenuOpen((previous) => !previous)}
+              disabled={isExporting}
+              size="icon"
+              aria-expanded={desktopExportMenuOpen}
+              aria-controls="designer-desktop-export-menu"
+              aria-label={isExporting ? "Exporting design" : "Open export options"}
+              className="h-12 w-12 rounded-full p-0 shadow-xl"
+            >
+              {isExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="sr-only">{`Exporting ${activeExportOption?.label || "..."}`}</span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4" />
+                  <span className="sr-only">Open export options</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

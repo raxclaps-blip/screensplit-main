@@ -4,11 +4,11 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import React from "react";
 import { cn } from "@/lib/utils";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { UserNav } from "@/components/auth/user-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import Logo from "./Logo";
+import { authClient } from "@/lib/auth-client";
 
 const menuItems = [
   { name: "About", href: "/about" },
@@ -19,8 +19,8 @@ export const Navbar = () => {
   const router = useRouter();
   const [menuState, setMenuState] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
-  const { data: session, status } = useSession();
-  const isAuthenticated = status === "authenticated";
+  const { data: session, isPending } = authClient.useSession();
+  const isAuthenticated = !isPending && Boolean(session?.user);
 
   React.useEffect(() => {
     const handleScroll = () => {

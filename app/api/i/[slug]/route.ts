@@ -1,7 +1,68 @@
 import { NextRequest, NextResponse } from "next/server"
+import { Readable } from "node:stream"
 import { prisma } from "@/lib/prisma"
 import { getFromR2 } from "@/lib/r2"
 import { cookies } from "next/headers"
+import { auth } from "@/lib/auth"
+
+function resolveObjectKey(finalImageUrl: string): string {
+  if (!finalImageUrl.startsWith("http")) {
+    return finalImageUrl
+  }
+
+  const url = new URL(finalImageUrl)
+  const segments = url.pathname.split("/").filter(Boolean)
+  if (segments.length <= 1) {
+    return segments[0] ?? finalImageUrl
+  }
+
+  const bucket = process.env.R2_BUCKET
+  if (bucket && segments[0] === bucket) {
+    return segments.slice(1).join("/")
+  }
+
+  return segments.slice(1).join("/")
+}
+
+function inferContentTypeFromKey(key: string): string {
+  const extension = key.split(".").pop()?.toLowerCase()
+  if (extension === "jpg" || extension === "jpeg") return "image/jpeg"
+  if (extension === "webp") return "image/webp"
+  if (extension === "avif") return "image/avif"
+  if (extension === "bmp") return "image/bmp"
+  return "image/png"
+}
+
+function matchesEtag(ifNoneMatch: string | null, etag: string | undefined): boolean {
+  if (!ifNoneMatch || !etag) return false
+  const candidates = ifNoneMatch.split(",").map((value) => value.trim())
+  if (candidates.includes("*")) return true
+  return candidates.includes(etag) || candidates.includes(etag.replace(/^W\//, ""))
+}
+
+function toWebStream(body: unknown): ReadableStream<Uint8Array> | null {
+  if (!body || typeof body !== "object") return null
+
+  const candidate = body as {
+    transformToWebStream?: () => ReadableStream<Uint8Array>
+    getReader?: () => ReadableStreamDefaultReader<Uint8Array>
+    pipe?: (...args: unknown[]) => unknown
+  }
+
+  if (typeof candidate.transformToWebStream === "function") {
+    return candidate.transformToWebStream()
+  }
+
+  if (typeof candidate.getReader === "function") {
+    return body as ReadableStream<Uint8Array>
+  }
+
+  if (typeof candidate.pipe === "function") {
+    return Readable.toWeb(body as Readable) as ReadableStream<Uint8Array>
+  }
+
+  return null
+}
 
 export async function GET(
   req: NextRequest,
@@ -15,12 +76,16 @@ export async function GET(
       where: { shareSlug: slug },
       select: {
         finalImageUrl: true,
+        beforeImage: true,
+        afterImage: true,
         isPrivate: true,
+        isPublic: true,
         exportFormat: true,
+        userId: true,
       },
     })
 
-    if (!project || !project.finalImageUrl) {
+    if (!project) {
       return NextResponse.json(
         { error: "Image not found" },
         { status: 404 }
@@ -28,28 +93,32 @@ export async function GET(
     }
 
     // Check if private and requires auth
+    let ownerAccess = false
     if (project.isPrivate) {
       const cookieStore = await cookies()
       const authCookie = cookieStore.get(`share_auth_${slug}`)
       
       if (!authCookie) {
-        return NextResponse.json(
-          { error: "Unauthorized" },
-          { status: 401 }
-        )
+        const session = await auth()
+        ownerAccess = Boolean(session?.user?.id && session.user.id === project.userId)
+        if (!ownerAccess) {
+          return NextResponse.json(
+            { error: "Unauthorized" },
+            { status: 401 }
+          )
+        }
       }
     }
 
-    // Extract key from finalImageUrl (it might be a full URL or just a key)
-    let key = project.finalImageUrl
-    
-    // If it's a full URL, extract just the key/filename
-    if (key.startsWith('http')) {
-      const url = new URL(key)
-      const pathParts = url.pathname.split('/')
-      // Remove empty strings and bucket name to get the key
-      key = pathParts.slice(2).join('/') || pathParts[pathParts.length - 1]
+    const storageUrl = project.finalImageUrl || project.beforeImage || project.afterImage
+    if (!storageUrl) {
+      return NextResponse.json(
+        { error: "Image data not available" },
+        { status: 404 }
+      )
     }
+
+    const key = resolveObjectKey(storageUrl)
     
     // Fetch image from cloud storage
     const response = await getFromR2(key)
@@ -61,43 +130,56 @@ export async function GET(
       )
     }
 
-    // Convert stream to buffer
-    const chunks: Uint8Array[] = []
-    for await (const chunk of response.Body as any) {
-      chunks.push(chunk)
-    }
-    const buffer = Buffer.concat(chunks)
-
     // Determine content type
-    const contentType = project.exportFormat === "JPEG" 
-      ? "image/jpeg" 
-      : "image/png"
-
-    // Generate ETag for caching
-    const crypto = await import("crypto")
-    const hash = crypto.createHash("md5").update(buffer).digest("hex")
-    const etag = `"${hash}"`
+    const contentType =
+      response.ContentType ||
+      inferContentTypeFromKey(key) ||
+      (project.exportFormat === "JPEG" ? "image/jpeg" : "image/png")
+    const etag = typeof response.ETag === "string" ? response.ETag : undefined
 
     // Check if client has cached version
     const ifNoneMatch = req.headers.get("if-none-match")
-    if (ifNoneMatch === etag) {
-      return new NextResponse(null, { status: 304 })
+    if (matchesEtag(ifNoneMatch, etag)) {
+      const notModifiedHeaders = new Headers()
+      if (etag) {
+        notModifiedHeaders.set("ETag", etag)
+      }
+      notModifiedHeaders.set(
+        "Cache-Control",
+        project.isPrivate
+          ? ownerAccess
+            ? "private, max-age=900, stale-while-revalidate=60"
+            : "private, no-cache, no-store, must-revalidate"
+          : "public, max-age=31536000, immutable"
+      )
+      return new NextResponse(null, { status: 304, headers: notModifiedHeaders })
     }
 
     // Set comprehensive performance headers
     const headers = new Headers()
     headers.set("Content-Type", contentType)
-    headers.set("Content-Length", buffer.length.toString())
-    headers.set("ETag", etag)
+    if (typeof response.ContentLength === "number") {
+      headers.set("Content-Length", String(response.ContentLength))
+    }
+    if (etag) {
+      headers.set("ETag", etag)
+    }
     headers.set("X-Content-Type-Options", "nosniff")
     
     // Enable compression
     headers.set("Vary", "Accept-Encoding")
+    if (response.LastModified instanceof Date) {
+      headers.set("Last-Modified", response.LastModified.toUTCString())
+    }
     
     if (project.isPrivate) {
-      headers.set("Cache-Control", "private, no-cache, no-store, must-revalidate")
-      headers.set("Pragma", "no-cache")
-      headers.set("Expires", "0")
+      if (ownerAccess) {
+        headers.set("Cache-Control", "private, max-age=900, stale-while-revalidate=60")
+      } else {
+        headers.set("Cache-Control", "private, no-cache, no-store, must-revalidate")
+        headers.set("Pragma", "no-cache")
+        headers.set("Expires", "0")
+      }
     } else {
       // Aggressive caching for public images
       headers.set("Cache-Control", "public, max-age=31536000, immutable, stale-while-revalidate=86400")
@@ -105,7 +187,15 @@ export async function GET(
       headers.set("Expires", expires.toUTCString())
     }
 
-    return new NextResponse(buffer, {
+    const stream = toWebStream(response.Body)
+    if (!stream) {
+      return NextResponse.json(
+        { error: "Image stream unavailable" },
+        { status: 500 }
+      )
+    }
+
+    return new NextResponse(stream, {
       status: 200,
       headers,
     })

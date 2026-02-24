@@ -49,12 +49,18 @@ export async function POST(request: NextRequest) {
       where: { email: validatedData.email },
       select: {
         email: true,
-        password: true, // Check if user has a password (not OAuth only)
+        accounts: {
+          where: { provider: "credential" },
+          select: {
+            password: true,
+          },
+          take: 1,
+        },
       },
     })
 
     // Always return success to prevent email enumeration
-    if (!user || !user.password) {
+    if (!user || !user.accounts[0]?.password) {
       return NextResponse.json(
         { message: "If an account exists, a password reset link will be sent to your email." },
         { status: 200 }

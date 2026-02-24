@@ -20,10 +20,10 @@ export async function GET() {
         email: true,
         image: true,
         createdAt: true,
-        password: true,
         accounts: {
           select: {
             provider: true,
+            password: true,
           },
         },
       },
@@ -34,11 +34,11 @@ export async function GET() {
     }
 
     const providerSet = new Set<string>()
-    if (user.password) {
+    if (user.accounts.some((account) => account.provider === "credential" && Boolean(account.password))) {
       providerSet.add("credentials")
     }
     for (const account of user.accounts) {
-      if (account.provider) {
+      if (account.provider && account.provider !== "credential") {
         providerSet.add(account.provider)
       }
     }

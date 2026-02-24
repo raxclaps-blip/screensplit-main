@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { signIn, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { toast } from "sonner"
+import { authClient } from "@/lib/auth-client"
 
 type OAuthProvider = "google" | "github"
 
@@ -20,7 +20,8 @@ interface SignUpFormProps {
 }
 
 export function SignUpForm({ googleEnabled = false, githubEnabled = false }: SignUpFormProps) {
-  const { status } = useSession()
+  const { data: session, isPending } = authClient.useSession()
+  const status = isPending ? "loading" : session ? "authenticated" : "unauthenticated"
   const [isLoading, setIsLoading] = useState(false)
   const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState("")
@@ -34,7 +35,7 @@ export function SignUpForm({ googleEnabled = false, githubEnabled = false }: Sig
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/apps/screensplit")
+      router.replace("/apps/dashboard")
     }
   }, [router, status])
 
@@ -125,7 +126,21 @@ export function SignUpForm({ googleEnabled = false, githubEnabled = false }: Sig
     try {
       const providerLabel = provider === "google" ? "Google" : "GitHub"
       toast(`Redirecting to ${providerLabel}...`)
-      await signIn(provider, { callbackUrl: "/apps/screensplit" })
+      const { data, error: signInError } = await authClient.signIn.social({
+        provider,
+        callbackURL: "/apps/dashboard",
+        disableRedirect: true,
+      })
+
+      if (signInError) {
+        throw signInError
+      }
+
+      if (!data?.url) {
+        throw new Error("Missing OAuth redirect URL")
+      }
+
+      window.location.href = data.url
     } catch {
       const providerLabel = provider === "google" ? "Google" : "GitHub"
       setError(`Failed to sign in with ${providerLabel}`)

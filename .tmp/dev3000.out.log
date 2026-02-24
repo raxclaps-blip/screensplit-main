@@ -1,0 +1,15 @@
+
+> screensplit@0.1.0 dev
+> next dev --turbopack --port 3000
+
+▲ Next.js 16.1.6 (Turbopack, Cache Components)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.197:3000
+- Environments: .env.local
+- Experiments (use with caution):
+  ✓ optimizeCss
+  · serverActions
+
+✓ Starting...
+✓ Ready in 3s
+○ Compiling /api/auth/[...all] ...

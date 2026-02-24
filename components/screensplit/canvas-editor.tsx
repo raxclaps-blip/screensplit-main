@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { ArrowLeft, Download, Loader2, AlignLeft, AlignCenter, AlignRight, Type, Palette, Image as ImageIcon, Settings2, Undo2, Redo2, RotateCcw, Share2, Copy, FileText, Printer, Code, Instagram, Twitter, Facebook, Bold, Italic, Pipette, ArrowUpLeft, ArrowUp, ArrowUpRight, ArrowLeft as ArrowLeftIcon, Dot, ArrowRight as ArrowRightIcon, ArrowDownLeft, ArrowDown, ArrowDownRight } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Upload, AlignLeft, AlignCenter, AlignRight, Type, Palette, Image as ImageIcon, Settings2, Undo2, Redo2, RotateCcw, Share2, Copy, FileText, Printer, Code, Instagram, Twitter, Facebook, Bold, Italic, Pipette, ArrowUpLeft, ArrowUp, ArrowUpRight, ArrowLeft as ArrowLeftIcon, Dot, ArrowRight as ArrowRightIcon, ArrowDownLeft, ArrowDown, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -29,6 +29,7 @@ const DEFAULT_VALUES = {
   afterText: "After",
   beforeSubtext: "",
   afterSubtext: "",
+  showLabelsText: true,
   fontSize: 48,
   textColor: "#ffffff",
   bgColor: "#000000",
@@ -63,11 +64,13 @@ type EditorState = typeof DEFAULT_VALUES
 
 export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const previewObjectUrlRef = useRef<string | null>(null)
   const [direction, setDirection] = useState<"horizontal" | "vertical">(DEFAULT_VALUES.direction)
   const [beforeText, setBeforeText] = useState(DEFAULT_VALUES.beforeText)
   const [afterText, setAfterText] = useState(DEFAULT_VALUES.afterText)
   const [beforeSubtext, setBeforeSubtext] = useState(DEFAULT_VALUES.beforeSubtext)
   const [afterSubtext, setAfterSubtext] = useState(DEFAULT_VALUES.afterSubtext)
+  const [showLabelsText, setShowLabelsText] = useState(DEFAULT_VALUES.showLabelsText)
   const [fontSize, setFontSize] = useState(DEFAULT_VALUES.fontSize)
   const [textColor, setTextColor] = useState(DEFAULT_VALUES.textColor)
   const [bgColor, setBgColor] = useState(DEFAULT_VALUES.bgColor)
@@ -103,6 +106,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   const [exportFormat, setExportFormat] = useState<"png" | "jpeg" | "webp" | "bmp">(DEFAULT_VALUES.exportFormat)
   const [quality, setQuality] = useState(DEFAULT_VALUES.quality)
   const [isUploading, setIsUploading] = useState(false)
+  const [isCloudSaved, setIsCloudSaved] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [shareSlug, setShareSlug] = useState<string | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
@@ -118,7 +122,16 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   const isRestoringRef = useRef(false)
   
   // Sticky canvas state
-  const [stickyCanvas, setStickyCanvas] = useState(true)
+  const [stickyCanvas, setStickyCanvas] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (previewObjectUrlRef.current) {
+        URL.revokeObjectURL(previewObjectUrlRef.current)
+        previewObjectUrlRef.current = null
+      }
+    }
+  }, [])
 
   // Get current editor state
   const getCurrentState = useCallback((): EditorState => ({
@@ -127,6 +140,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     afterText,
     beforeSubtext,
     afterSubtext,
+    showLabelsText,
     fontSize,
     textColor,
     bgColor,
@@ -155,7 +169,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     sepia,
     exportFormat,
     quality,
-  }), [direction, beforeText, afterText, beforeSubtext, afterSubtext, fontSize, textColor, bgColor, textBgColor, showTextBackground, textBgOpacity, textPosition, fontFamily, mainTextBold, mainTextItalic, subtextBold, subtextItalic, borderWidth, borderColor, useGradient, gradientColor1, gradientColor2, gradientAngle, blurAmount, bgPadding, bgShape, brightness, contrast, saturation, grayscale, sepia, exportFormat, quality])
+  }), [direction, beforeText, afterText, beforeSubtext, afterSubtext, showLabelsText, fontSize, textColor, bgColor, textBgColor, showTextBackground, textBgOpacity, textPosition, fontFamily, mainTextBold, mainTextItalic, subtextBold, subtextItalic, borderWidth, borderColor, useGradient, gradientColor1, gradientColor2, gradientAngle, blurAmount, bgPadding, bgShape, brightness, contrast, saturation, grayscale, sepia, exportFormat, quality])
 
   // Save state to history
   const saveToHistory = useCallback(() => {
@@ -183,6 +197,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     setAfterText(state.afterText)
     setBeforeSubtext(state.beforeSubtext)
     setAfterSubtext(state.afterSubtext)
+    setShowLabelsText(state.showLabelsText)
     setFontSize(state.fontSize)
     setTextColor(state.textColor)
     setBgColor(state.bgColor)
@@ -245,42 +260,8 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   // Track state changes for undo/redo
   useEffect(() => {
     saveToHistory()
-  }, [direction, beforeText, afterText, beforeSubtext, afterSubtext, fontSize, textColor, bgColor, textBgColor, showTextBackground, textBgOpacity, textPosition, fontFamily, mainTextBold, mainTextItalic, subtextBold, subtextItalic, borderWidth, borderColor, useGradient, gradientColor1, gradientColor2, gradientAngle, blurAmount, bgPadding, bgShape, brightness, contrast, saturation, grayscale, sepia])
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Check if user is typing in an input
-      const target = e.target as HTMLElement
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-        return
-      }
-
-      // Ctrl/Cmd + Z for undo
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault()
-        handleUndo()
-      }
-      // Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y for redo
-      else if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'z' || e.key === 'y')) {
-        e.preventDefault()
-        handleRedo()
-      }
-      // D for download
-      else if (e.key === 'd' || e.key === 'D') {
-        e.preventDefault()
-        handleDownloadAndSave()
-      }
-      // R for reset
-      else if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault()
-        handleResetToDefaults()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [handleUndo, handleRedo, handleResetToDefaults])
+    setIsCloudSaved(false)
+  }, [direction, beforeText, afterText, beforeSubtext, afterSubtext, showLabelsText, fontSize, textColor, bgColor, textBgColor, showTextBackground, textBgOpacity, textPosition, fontFamily, mainTextBold, mainTextItalic, subtextBold, subtextItalic, borderWidth, borderColor, useGradient, gradientColor1, gradientColor2, gradientAngle, blurAmount, bgPadding, bgShape, brightness, contrast, saturation, grayscale, sepia])
 
   // Social media preset dimensions
   const socialPresets = {
@@ -559,7 +540,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
     if (!shareSlug) {
       toast.info("Save first to share", {
-        description: "Click 'Download & Save' to upload your image, then you can share it on social media"
+        description: "Click 'Save to Cloud' to upload your image, then you can share it on social media"
       })
       return
     }
@@ -572,7 +553,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
   useEffect(() => {
     drawCanvas()
-  }, [beforeImage, afterImage, direction, beforeText, afterText, beforeSubtext, afterSubtext, fontSize, textColor, bgColor, textBgColor, showTextBackground, textBgOpacity, textPosition, fontFamily, mainTextBold, mainTextItalic, subtextBold, subtextItalic, borderWidth, borderColor, useGradient, gradientColor1, gradientColor2, gradientAngle, blurAmount, bgPadding, bgShape, brightness, contrast, saturation, grayscale, sepia])
+  }, [beforeImage, afterImage, direction, beforeText, afterText, beforeSubtext, afterSubtext, showLabelsText, fontSize, textColor, bgColor, textBgColor, showTextBackground, textBgOpacity, textPosition, fontFamily, mainTextBold, mainTextItalic, subtextBold, subtextItalic, borderWidth, borderColor, useGradient, gradientColor1, gradientColor2, gradientAngle, blurAmount, bgPadding, bgShape, brightness, contrast, saturation, grayscale, sepia])
 
   const drawCanvas = () => {
     const canvas = canvasRef.current
@@ -772,9 +753,11 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
           ctx.drawImage(afterImg, beforeWidth, 0, afterWidth, targetHeight)
           ctx.filter = 'none'
 
-          // Draw text with backgrounds
-          drawTextWithBackground(beforeText, beforeSubtext, 0, 0, beforeWidth, targetHeight)
-          drawTextWithBackground(afterText, afterSubtext, beforeWidth, 0, afterWidth, targetHeight)
+          if (showLabelsText) {
+            // Draw labels and text overlays
+            drawTextWithBackground(beforeText, beforeSubtext, 0, 0, beforeWidth, targetHeight)
+            drawTextWithBackground(afterText, afterSubtext, beforeWidth, 0, afterWidth, targetHeight)
+          }
         } else {
           const targetWidth = Math.min(maxWidth, Math.max(beforeImg.width, afterImg.width))
           const beforeHeight = (beforeImg.height * targetWidth) / beforeImg.width
@@ -792,9 +775,11 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
           ctx.drawImage(afterImg, 0, beforeHeight, targetWidth, afterHeight)
           ctx.filter = 'none'
 
-          // Draw text with backgrounds
-          drawTextWithBackground(beforeText, beforeSubtext, 0, 0, targetWidth, beforeHeight)
-          drawTextWithBackground(afterText, afterSubtext, 0, beforeHeight, targetWidth, afterHeight)
+          if (showLabelsText) {
+            // Draw labels and text overlays
+            drawTextWithBackground(beforeText, beforeSubtext, 0, 0, targetWidth, beforeHeight)
+            drawTextWithBackground(afterText, afterSubtext, 0, beforeHeight, targetWidth, afterHeight)
+          }
         }
       }
     }
@@ -805,87 +790,192 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     afterImg.src = afterImage
   }
 
-  const handleDownloadAndSave = async () => {
+  const createExportBlob = useCallback(async () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas) {
+      throw new Error("Canvas not ready")
+    }
 
+    // Determine MIME type and quality
+    let mimeType = "image/png"
+    let fileExtension = "png"
+    let useQuality = quality
+
+    switch (exportFormat) {
+      case "jpeg":
+        mimeType = "image/jpeg"
+        fileExtension = "jpg"
+        break
+      case "webp":
+        mimeType = "image/webp"
+        fileExtension = "webp"
+        break
+      case "bmp":
+        mimeType = "image/bmp"
+        fileExtension = "bmp"
+        useQuality = 1
+        break
+      default:
+        mimeType = "image/png"
+        fileExtension = "png"
+        useQuality = 1
+    }
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((b) => resolve(b), mimeType, useQuality)
+    })
+
+    if (!blob) {
+      throw new Error("Unable to generate image file.")
+    }
+
+    return { blob, fileExtension }
+  }, [exportFormat, quality])
+
+  const handleDownloadNow = useCallback(async () => {
+    try {
+      const { blob, fileExtension } = await createExportBlob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = downloadUrl
+      a.download = `screensplit-${Date.now()}.${fileExtension}`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 2000)
+      toast.success("Download started")
+    } catch (error) {
+      toast.error("Download failed", {
+        description: error instanceof Error ? error.message : "Unable to export image.",
+      })
+    }
+  }, [createExportBlob])
+
+  const handleSaveToCloud = useCallback(async () => {
+    setShareSlug(null)
+    setShareDialogOpen(false)
+    setIsCloudSaved(false)
+
+    let blob: Blob
+    let fileExtension: string
+    try {
+      const exported = await createExportBlob()
+      blob = exported.blob
+      fileExtension = exported.fileExtension
+    } catch (error) {
+      toast.error("Save failed", {
+        description: error instanceof Error ? error.message : "Unable to export image.",
+      })
+      return
+    }
+
+    // Keep a preview URL for the share dialog.
+    if (previewObjectUrlRef.current) {
+      URL.revokeObjectURL(previewObjectUrlRef.current)
+      previewObjectUrlRef.current = null
+    }
+    const objectUrl = URL.createObjectURL(blob)
+    previewObjectUrlRef.current = objectUrl
+    setImageDataUrl(objectUrl)
+
+    const toastId = toast.loading("Saving to cloud...")
     setIsUploading(true)
 
     try {
-      const toastId = toast.loading("Exporting & uploading...")
-      // Determine MIME type and quality
-      let mimeType = "image/png"
-      let fileExtension = "png"
-      let useQuality = quality
+      const formData = new FormData()
+      formData.append("image", blob, `screensplit-${Date.now()}.${fileExtension}`)
+      formData.append("layout", direction)
+      formData.append("beforeLabel", beforeText)
+      formData.append("afterLabel", afterText)
+      formData.append("beforeSubtext", beforeSubtext)
+      formData.append("afterSubtext", afterSubtext)
+      formData.append("fontSize", String(fontSize))
+      formData.append("textColor", textColor)
+      formData.append("bgColor", bgColor)
+      formData.append("textBgColor", textBgColor)
+      formData.append("textPosition", textPosition)
+      formData.append("exportFormat", exportFormat)
 
-      switch (exportFormat) {
-        case "jpeg":
-          mimeType = "image/jpeg"
-          fileExtension = "jpg"
-          break
-        case "webp":
-          mimeType = "image/webp"
-          fileExtension = "webp"
-          break
-        case "bmp":
-          mimeType = "image/bmp"
-          fileExtension = "bmp"
-          useQuality = 1 // BMP doesn't use quality
-          break
-        default:
-          mimeType = "image/png"
-          fileExtension = "png"
-          useQuality = 1 // PNG is lossless
-      }
-
-      // Get data URL for both download and upload
-      const dataUrl = canvas.toDataURL(mimeType, useQuality)
-      setImageDataUrl(dataUrl)
-
-      // Trigger local download immediately
-      const a = document.createElement("a")
-      a.href = dataUrl
-      a.download = `screensplit-${Date.now()}.${fileExtension}`
-      a.click()
-
-      // Upload to cloud in parallel
       const response = await fetch("/api/upload-image", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          imageDataUrl: dataUrl,
-          layout: direction,
-          beforeLabel: beforeText,
-          afterLabel: afterText,
-          beforeSubtext,
-          afterSubtext,
-          fontSize,
-          textColor,
-          bgColor,
-          textBgColor,
-          textPosition,
-          exportFormat,
-        }),
+        body: formData,
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Failed to upload image")
+        const error = await response.json().catch(() => null)
+        throw new Error(error?.error || "Failed to upload image")
       }
 
       const data = await response.json()
       setShareSlug(data.shareSlug)
       setShareDialogOpen(true)
-      toast.success("Done!", { description: "Image downloaded and saved to cloud.", id: toastId })
+      setIsCloudSaved(true)
+      toast.success("Saved to cloud!", { description: "Share link is ready.", id: toastId })
     } catch (error) {
-      console.error("Error in download and save:", error)
-      toast.error("Upload failed", {
+      console.error("Error saving image:", error)
+      toast.error("Cloud save failed", {
         description: error instanceof Error ? error.message : "Failed to save image to cloud",
+        id: toastId,
       })
+      setIsCloudSaved(false)
     } finally {
       setIsUploading(false)
     }
-  }
+  }, [
+    afterSubtext,
+    afterText,
+    beforeSubtext,
+    beforeText,
+    bgColor,
+    createExportBlob,
+    direction,
+    exportFormat,
+    fontSize,
+    setIsCloudSaved,
+    textBgColor,
+    textColor,
+    textPosition,
+  ])
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Check if user is typing in an input
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return
+      }
+
+      // Ctrl/Cmd + Z for undo
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        handleUndo()
+      }
+      // Ctrl/Cmd + Shift + Z or Ctrl/Cmd + Y for redo
+      else if ((e.ctrlKey || e.metaKey) && (e.shiftKey && e.key === 'z' || e.key === 'y')) {
+        e.preventDefault()
+        handleRedo()
+      }
+      // D for download
+      else if (e.key === 'd' || e.key === 'D') {
+        e.preventDefault()
+        void handleDownloadNow()
+      }
+      // S for save to cloud
+      else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        if (!isUploading) {
+          void handleSaveToCloud()
+        }
+      }
+      // R for reset
+      else if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault()
+        handleResetToDefaults()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [handleUndo, handleRedo, handleDownloadNow, handleSaveToCloud, handleResetToDefaults, isUploading])
 
   return (
     <TooltipProvider>
@@ -906,7 +996,6 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
             stickyCanvas ? 'sticky top-20 z-40 bg-background pb-4 pt-2' : 'lg:sticky lg:top-8'
           }`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-2xl font-bold">Preview</h2>
               <div className="flex flex-wrap gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -954,21 +1043,36 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
                 <Tooltip>
                   <TooltipTrigger asChild>
+                      <Button 
+                        onClick={() => void handleDownloadNow()} 
+                        className="gap-2 bg-primary rounded-full shrink-0"
+                      >
+                      <Download className="h-4 w-4" />
+                      <span className="hidden sm:inline">Download Now</span>
+                      <span className="sm:hidden">Download</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Instant local download (D)</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <Button 
-                      onClick={handleDownloadAndSave} 
+                      onClick={() => void handleSaveToCloud()} 
                       disabled={isUploading} 
+                      variant="outline"
                       className="gap-2 rounded-full shrink-0"
                     >
                       {isUploading ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Download className="h-4 w-4" />
+                        <Upload className="h-4 w-4" />
                       )}
-                      <span className="hidden sm:inline">{isUploading ? "Processing..." : "Download & Save"}</span>
+                      <span className="hidden sm:inline">{isUploading ? "Saving..." : isCloudSaved ? "Saved" : "Save to Cloud"}</span>
                       <span className="sm:hidden">{isUploading ? "..." : "Save"}</span>
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Download image locally and save to cloud (D)</TooltipContent>
+                  <TooltipContent>Upload to cloud and generate share link (S)</TooltipContent>
                 </Tooltip>
               </div>
             </div>
@@ -1098,6 +1202,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-bold">Customize</h2>
+                <Separator orientation="vertical" className="h-5 lg:hidden" />
                 {/* Sticky Canvas Toggle - Mobile Only */}
                 <div className="flex items-center gap-2 lg:hidden">
                   <Switch
@@ -1106,7 +1211,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
                     onCheckedChange={setStickyCanvas}
                   />
                   <Label htmlFor="sticky-canvas" className="text-xs cursor-pointer whitespace-nowrap">
-                    Sticky
+                    Sticky Image
                   </Label>
                 </div>
               </div>
@@ -1127,17 +1232,29 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
             </div>
 
           {/* Direction */}
-          <div className="space-y-2">
-            <Label>Layout Direction</Label>
-            <Select value={direction} onValueChange={(value: "horizontal" | "vertical") => setDirection(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="horizontal">Side by Side</SelectItem>
-                <SelectItem value="vertical">Top and Bottom</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-end gap-3">
+            <div className="flex-1 space-y-2">
+              <Label>Layout Direction</Label>
+              <Select value={direction} onValueChange={(value: "horizontal" | "vertical") => setDirection(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="horizontal">Side by Side</SelectItem>
+                  <SelectItem value="vertical">Top and Bottom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="mb-1 flex items-center gap-2">
+              <Label htmlFor="show-labels-text" className="cursor-pointer whitespace-nowrap text-xs text-muted-foreground">
+                Show Before/After Texts
+              </Label>
+              <Switch
+                id="show-labels-text"
+                checked={showLabelsText}
+                onCheckedChange={setShowLabelsText}
+              />
+            </div>
           </div>
 
           <Separator className="my-6" />
@@ -2087,7 +2204,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
                 </Button>
               </div>
               <div className="text-[10px] sm:text-xs text-muted-foreground space-y-1.5 sm:space-y-1 break-words">
-                <p className="leading-relaxed">💡 <strong className="font-semibold">Note:</strong> For best results, upload your image first using &quot;Download & Save&quot;.</p>
+                <p className="leading-relaxed">💡 <strong className="font-semibold">Note:</strong> For best results, upload your image first using &quot;Save to Cloud&quot;.</p>
                 <p className="leading-relaxed">The embed code will then use a permanent cloud URL instead of a data URL.</p>
               </div>
             </div>

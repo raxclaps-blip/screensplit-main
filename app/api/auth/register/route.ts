@@ -73,19 +73,33 @@ export async function POST(request: NextRequest) {
     const saltRounds = Number.parseInt(process.env.BCRYPT_COST || "12")
     const hashedPassword = await bcrypt.hash(password, saltRounds)
 
-    // Create user (email not verified yet)
-    const user = await prisma.user.create({
-      data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        password: hashedPassword,
-        emailVerified: null, // Not verified yet
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
+    // Create user plus Better Auth credential account (email not verified yet)
+    const user = await prisma.$transaction(async (tx) => {
+      const createdUser = await tx.user.create({
+        data: {
+          name: validatedData.name,
+          email: validatedData.email,
+          password: hashedPassword,
+          emailVerified: false,
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      })
+
+      await tx.account.create({
+        data: {
+          userId: createdUser.id,
+          type: "credentials",
+          provider: "credential",
+          providerAccountId: createdUser.id,
+          password: hashedPassword,
+        },
+      })
+
+      return createdUser
     })
 
     let verificationToken: string | null = null

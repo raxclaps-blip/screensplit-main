@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
-export default function DashboardPage() {
-  redirect("/apps/screensplit")
+export default function AppsRootRedirect() {
+  redirect("/apps/dashboard")
 }
