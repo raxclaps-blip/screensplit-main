@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { signIn, useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,6 +10,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from "next/link"
 import { toast } from "sonner"
+import { AUTH_CALLBACK_COOKIE } from "@/lib/auth-callback"
+import { authClient } from "@/lib/auth-client"
 
 interface SignInFormProps {
   callbackUrl?: string
@@ -28,28 +29,30 @@ const STORAGE_KEYS = {
   savedEmail: "screensplit.auth.saved_email",
 } as const
 
-function getSignInErrorMessage(error?: string, code?: string) {
-  if (code === "rate_limited") {
+function getSignInErrorMessage(message?: string) {
+  if (!message) {
+    return "Invalid email or password. Please check your credentials and try again."
+  }
+
+  const normalized = message.toLowerCase()
+
+  if (normalized.includes("too many")) {
     return "Too many login attempts. Please try again later."
   }
 
-  if (code === "email_not_verified") {
+  if (normalized.includes("email not verified")) {
     return "Please verify your email before signing in."
   }
 
-  if (code === "auth_unavailable") {
-    return "Authentication service is temporarily unavailable. Please try again."
-  }
-
-  if (error === "OAuthAccountNotLinked") {
+  if (normalized.includes("account not linked")) {
     return "This email is already linked to another sign-in method."
   }
 
-  if (error === "Configuration") {
+  if (normalized.includes("not enabled") || normalized.includes("configuration")) {
     return "Authentication service is not properly configured. Please contact support."
   }
 
-  return "Invalid email or password. Please check your credentials and try again."
+  return message
 }
 
 function getStorageItem(key: string) {
@@ -66,6 +69,31 @@ function setStorageItem(key: string, value: string) {
   } catch {}
 }
 
+function getCookieItem(key: string) {
+  if (typeof document === "undefined") return null
+  const encodedKey = `${encodeURIComponent(key)}=`
+  const cookieEntry = document.cookie.split("; ").find((entry) => entry.startsWith(encodedKey))
+  if (!cookieEntry) return null
+  const rawValue = cookieEntry.slice(encodedKey.length)
+  try {
+    return decodeURIComponent(rawValue)
+  } catch {
+    return rawValue
+  }
+}
+
+function setCookieItem(key: string, value: string, maxAgeSeconds: number) {
+  if (typeof window === "undefined") return
+  const secure = window.location.protocol === "https:" ? "; Secure" : ""
+  document.cookie = `${encodeURIComponent(key)}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax${secure}`
+}
+
+function removeCookieItem(key: string) {
+  if (typeof window === "undefined") return
+  const secure = window.location.protocol === "https:" ? "; Secure" : ""
+  document.cookie = `${encodeURIComponent(key)}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+}
+
 function removeStorageItem(key: string) {
   try {
     window.localStorage.removeItem(key)
@@ -79,14 +107,23 @@ function formatLastUsedTime(timestamp?: number | null) {
   return date.toLocaleString()
 }
 
+function sanitizeCallbackUrl(rawCallbackUrl: string | null | undefined, fallback = "/apps/dashboard") {
+  if (!rawCallbackUrl) return fallback
+  const trimmed = rawCallbackUrl.trim()
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return fallback
+  if (trimmed.startsWith("/auth") || trimmed.startsWith("/api/auth")) return fallback
+  return trimmed
+}
+
 export function SignInForm({
-  callbackUrl = "/apps/screensplit",
+  callbackUrl = "/apps/dashboard",
   googleEnabled = false,
   githubEnabled = false,
 }: SignInFormProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { status } = useSession()
+  const { data: session, isPending } = authClient.useSession()
+  const status = isPending ? "loading" : session ? "authenticated" : "unauthenticated"
   const [isLoading, setIsLoading] = useState(false)
   const [oauthLoadingProvider, setOauthLoadingProvider] = useState<OAuthProvider | null>(null)
   const [error, setError] = useState("")
@@ -98,9 +135,19 @@ export function SignInForm({
   const [hasHydratedStorage, setHasHydratedStorage] = useState(false)
 
   const resolvedCallbackUrl = useMemo(() => {
-    const rawCallbackUrl = searchParams.get("callbackUrl") || callbackUrl
-    return rawCallbackUrl.startsWith("/") ? rawCallbackUrl : "/apps/screensplit"
+    const callbackFromCookie = getCookieItem(AUTH_CALLBACK_COOKIE)
+    const rawCallbackUrl = callbackFromCookie || searchParams.get("callbackUrl") || callbackUrl
+    return sanitizeCallbackUrl(rawCallbackUrl, "/apps/dashboard")
   }, [callbackUrl, searchParams])
+
+  useEffect(() => {
+    const callbackFromQuery = searchParams.get("callbackUrl")
+    if (!callbackFromQuery) return
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("callbackUrl")
+    const cleanUrl = params.size > 0 ? `/auth/signin?${params.toString()}` : "/auth/signin"
+    router.replace(cleanUrl)
+  }, [router, searchParams])
 
   useEffect(() => {
     const savedRememberMe = getStorageItem(STORAGE_KEYS.rememberMe) === "1"
@@ -122,6 +169,7 @@ export function SignInForm({
 
   useEffect(() => {
     if (status === "authenticated") {
+      removeCookieItem(AUTH_CALLBACK_COOKIE)
       router.replace(resolvedCallbackUrl)
     }
   }, [resolvedCallbackUrl, router, status])
@@ -171,26 +219,36 @@ export function SignInForm({
 
     try {
       toast("Signing in...", { description: "Please wait" })
-      const result = await signIn("credentials", {
+      setCookieItem(AUTH_CALLBACK_COOKIE, resolvedCallbackUrl, 10 * 60)
+      const { data, error: signInError } = await authClient.signIn.email({
         email: normalizedEmail,
         password,
-        remember: rememberMe ? "true" : "false",
-        redirect: false,
-        callbackUrl: resolvedCallbackUrl,
+        rememberMe,
+        callbackURL: resolvedCallbackUrl,
       })
 
-      if (result?.error) {
-        const errorMessage = getSignInErrorMessage(result.error, result.code)
+      if (signInError) {
+        const errorMessage = getSignInErrorMessage(signInError.message)
         
         setError(errorMessage)
         toast.error(errorMessage)
         setIsLoading(false)
-      } else if (result?.ok) {
+      } else if (data) {
         persistRememberPreferences(rememberMe, normalizedEmail)
         persistLastUsed("credentials")
+        if (data.redirect && data.url) {
+          window.location.href = data.url
+          return
+        }
+        removeCookieItem(AUTH_CALLBACK_COOKIE)
         toast.success("Signed in successfully")
-        router.replace(resolvedCallbackUrl)
+        router.replace(data.url || resolvedCallbackUrl)
         router.refresh()
+      } else {
+        const fallbackError = "Sign in did not complete. Please try again."
+        setError(fallbackError)
+        toast.error(fallbackError)
+        setIsLoading(false)
       }
     } catch (error) {
       console.error("Login error:", error)
@@ -208,8 +266,23 @@ export function SignInForm({
     try {
       const providerLabel = provider === "google" ? "Google" : "GitHub"
       toast(`Redirecting to ${providerLabel}...`)
+      setCookieItem(AUTH_CALLBACK_COOKIE, resolvedCallbackUrl, 10 * 60)
+      const { data, error: signInError } = await authClient.signIn.social({
+        provider,
+        callbackURL: resolvedCallbackUrl,
+        disableRedirect: true,
+      })
+
+      if (signInError) {
+        throw signInError
+      }
+
+      if (!data?.url) {
+        throw new Error("Missing OAuth redirect URL")
+      }
+
       persistLastUsed(provider)
-      await signIn(provider, { callbackUrl: resolvedCallbackUrl })
+      window.location.href = data.url
     } catch {
       const providerLabel = provider === "google" ? "Google" : "GitHub"
       setError(`Failed to sign in with ${providerLabel}`)

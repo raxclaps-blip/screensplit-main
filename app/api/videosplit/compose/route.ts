@@ -6,14 +6,13 @@ import path from "node:path"
 import { NextResponse } from "next/server"
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg"
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
 export const maxDuration = 300
 
 const TARGET_WIDTH = 1080
 const TARGET_HEIGHT = 1920
 const TARGET_FPS = 30
-const MAX_UPLOAD_BYTES = 500 * 1024 * 1024
+const MAX_UPLOAD_BYTES = 200 * 1024 * 1024
+const MAX_UPLOAD_DURATION_SECONDS = 121
 
 type TextPosition =
   | "top-left"
@@ -66,6 +65,10 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
 }
 
+function isDurationOverLimit(durationSeconds: number | null | undefined): boolean {
+  return typeof durationSeconds === "number" && Number.isFinite(durationSeconds) && durationSeconds > MAX_UPLOAD_DURATION_SECONDS
+}
+
 function pickString(value: unknown, fallback: string): string {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback
 }
@@ -100,7 +103,7 @@ function normalizeControls(raw: unknown): ComposeControls {
     afterText: pickString(source.afterText, "After"),
     beforeSubtext: pickString(source.beforeSubtext, ""),
     afterSubtext: pickString(source.afterSubtext, ""),
-    fontSize: clamp(Math.round(pickNumber(source.fontSize, 48)), 16, 160),
+    fontSize: clamp(Math.round(pickNumber(source.fontSize, 18)), 12, 120),
     textColor: pickString(source.textColor, "#ffffff"),
     textBgColor: pickString(source.textBgColor, "#000000"),
     showTextBackground: pickBoolean(source.showTextBackground, true),
@@ -139,26 +142,41 @@ function makeLabel(main: string, sub: string): string {
   return trimmedSub ? `${trimmedMain}\\n${trimmedSub}` : trimmedMain
 }
 
-function getPositionExpr(position: TextPosition): { x: string; y: string } {
-  const x = position.includes("left") ? "20" : position.includes("right") ? "(w-text_w-20)" : "((w-text_w)/2)"
-  const y = position.startsWith("top") ? "20" : position.startsWith("bottom") ? "(h-text_h-20)" : "((h-text_h)/2)"
+function getPositionExpr(position: TextPosition, margin: number): { x: string; y: string } {
+  const x = position.includes("left")
+    ? `${margin}`
+    : position.includes("right")
+      ? `max(${margin},w-text_w-${margin})`
+      : `max(${margin},min((w-text_w)/2,w-text_w-${margin}))`
+  const y = position.startsWith("top")
+    ? `${margin}`
+    : position.startsWith("bottom")
+      ? `max(${margin},h-text_h-${margin})`
+      : `max(${margin},min((h-text_h)/2,h-text_h-${margin}))`
   return { x, y }
 }
 
-function buildDrawtext(label: string, controls: ComposeControls): string {
+function getRenderTextScale(panelWidth: number): number {
+  const previewReferenceWidth = 360
+  return clamp(Math.max(1, panelWidth) / previewReferenceWidth, 0.8, 8)
+}
+
+function buildDrawtext(label: string, controls: ComposeControls, panelWidth: number): string {
   const clean = label.trim()
   if (!clean) return ""
 
-  const { x, y } = getPositionExpr(controls.textPosition)
-  const lineSpacing = Math.max(2, Math.round(controls.fontSize * 0.2))
-  const boxBorder = Math.max(8, Math.round(controls.fontSize * controls.bgPadding))
+  const scale = getRenderTextScale(panelWidth)
+  const renderFontSize = clamp(Math.round(controls.fontSize * scale), 16, 480)
+  const margin = Math.max(8, Math.round(20 * scale))
+  const { x, y } = getPositionExpr(controls.textPosition, margin)
+  const lineSpacing = Math.max(2, Math.round(renderFontSize * 0.2))
+  const boxBorder = Math.max(4, Math.round(renderFontSize * controls.bgPadding))
 
   const args = [
-    "drawtext",
-    `font=Sans`,
+    "font=Sans",
     `text='${escapeDrawtext(clean)}'`,
     `fontcolor=${toFfmpegColor(controls.textColor, "0xFFFFFF")}`,
-    `fontsize=${controls.fontSize}`,
+    `fontsize=${renderFontSize}`,
     `line_spacing=${lineSpacing}`,
     `x=${x}`,
     `y=${y}`,
@@ -167,7 +185,7 @@ function buildDrawtext(label: string, controls: ComposeControls): string {
     `boxborderw=${boxBorder}`,
   ]
 
-  return args.join(":")
+  return `drawtext=${args.join(":")}`
 }
 
 function buildVideoFilter(inputIndex: number, label: string, controls: ComposeControls, outputLabel: string): string {
@@ -176,7 +194,6 @@ function buildVideoFilter(inputIndex: number, label: string, controls: ComposeCo
   const saturation = clamp(controls.saturation / 100, 0, 3).toFixed(3)
 
   const chain: string[] = [
-    `[${inputIndex}:v]`,
     `scale=${TARGET_WIDTH}:${TARGET_HEIGHT}:force_original_aspect_ratio=decrease`,
     `pad=${TARGET_WIDTH}:${TARGET_HEIGHT}:(ow-iw)/2:(oh-ih)/2:color=${toFfmpegColor(controls.bgColor, "0x000000")}`,
     "setsar=1",
@@ -185,12 +202,12 @@ function buildVideoFilter(inputIndex: number, label: string, controls: ComposeCo
     "format=yuv420p",
   ]
 
-  const drawtext = buildDrawtext(label, controls)
+  const drawtext = buildDrawtext(label, controls, TARGET_WIDTH)
   if (drawtext) {
     chain.push(drawtext)
   }
 
-  return `${chain.join(",")}[${outputLabel}]`
+  return `[${inputIndex}:v]${chain.join(",")}[${outputLabel}]`
 }
 
 function parseDuration(stderr: string): number | null {
@@ -323,7 +340,7 @@ export async function POST(request: Request) {
     }
 
     if (before.size > MAX_UPLOAD_BYTES || after.size > MAX_UPLOAD_BYTES) {
-      return NextResponse.json({ error: "Each uploaded file must be 500MB or smaller." }, { status: 413 })
+      return NextResponse.json({ error: "Each uploaded file must be 200MB or smaller." }, { status: 413 })
     }
 
     let parsedControls: unknown = {}
@@ -346,6 +363,12 @@ export async function POST(request: Request) {
     await fs.writeFile(afterPath, Buffer.from(await after.arrayBuffer()))
 
     const [beforeProbe, afterProbe] = await Promise.all([probeVideo(ffmpegPath, beforePath), probeVideo(ffmpegPath, afterPath)])
+    if (isDurationOverLimit(beforeProbe.durationSeconds) || isDurationOverLimit(afterProbe.durationSeconds)) {
+      return NextResponse.json(
+        { error: `Each uploaded video must be ${MAX_UPLOAD_DURATION_SECONDS} seconds or shorter.` },
+        { status: 413 }
+      )
+    }
 
     const firstIsBefore = controls.direction !== "vertical"
     const firstInput = firstIsBefore ? 0 : 1

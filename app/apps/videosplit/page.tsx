@@ -17,6 +17,9 @@ export default function VideosplitPage() {
   const beforeVideoRef = useRef<string | null>(null)
   const afterVideoRef = useRef<string | null>(null)
   const [controls, setControls] = useState<VideoControlsState>({
+    // Composition
+    compositionMode: "sequential",
+
     // Layout Direction
     direction: "horizontal",
     
@@ -25,7 +28,7 @@ export default function VideosplitPage() {
     afterText: "After",
     beforeSubtext: "",
     afterSubtext: "",
-    fontSize: 48,
+    fontSize: 18,
     textColor: "#ffffff",
     textBgColor: "#000000",
     showTextBackground: true,

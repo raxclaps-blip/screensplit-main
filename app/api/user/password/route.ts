@@ -30,9 +30,34 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: {
+        id: true,
+        password: true,
+      },
     })
 
-    if (!user || !user.password) {
+    if (!user) {
+      return NextResponse.json(
+        { error: "Password change not available for this account" },
+        { status: 400 }
+      )
+    }
+
+    const credentialAccount = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: "credential",
+          providerAccountId: user.id,
+        },
+      },
+      select: {
+        password: true,
+      },
+    })
+
+    const currentHash = credentialAccount?.password || user.password
+
+    if (!currentHash) {
       return NextResponse.json(
         { error: "Password change not available for this account" },
         { status: 400 }
@@ -40,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify current password
-    const isValid = await bcrypt.compare(currentPassword, user.password)
+    const isValid = await bcrypt.compare(currentPassword, currentHash)
     if (!isValid) {
       return NextResponse.json(
         { error: "Current password is incorrect" },
@@ -53,17 +78,32 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds)
 
     // Update password and invalidate sessions via tokenVersion
-    try {
-      await prisma.user.update({
-        where: { email: session.user.email },
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: user.id },
         data: { password: hashedPassword, tokenVersion: { increment: 1 } },
       })
-    } catch {
-      await prisma.user.update({
-        where: { email: session.user.email },
-        data: { password: hashedPassword },
+
+      await tx.account.upsert({
+        where: {
+          provider_providerAccountId: {
+            provider: "credential",
+            providerAccountId: user.id,
+          },
+        },
+        create: {
+          userId: user.id,
+          type: "credentials",
+          provider: "credential",
+          providerAccountId: user.id,
+          password: hashedPassword,
+        },
+        update: {
+          type: "credentials",
+          password: hashedPassword,
+        },
       })
-    }
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

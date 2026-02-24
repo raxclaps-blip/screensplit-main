@@ -22,6 +22,5 @@ export async function getSession() {
 
 // Client-side hook for checking auth status
 export function useRequireAuth() {
-  // This would be used in client components
-  // The actual implementation would use useSession from next-auth/react
+  // This can be implemented with authClient.useSession() in client components.
 }

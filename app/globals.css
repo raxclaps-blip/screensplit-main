@@ -5,105 +5,73 @@
 
 :root {
   --radius: 0.65rem;
-
-  /* Base (light: warm paper) */
-  --background: oklch(0.99 0.01 90);
-  --foreground: oklch(0.16 0.02 40);
-
-  --card: oklch(0.985 0.01 90);
-  --card-foreground: oklch(0.16 0.02 40);
-
-  --popover: oklch(0.985 0.01 90);
-  --popover-foreground: oklch(0.16 0.02 40);
-
-  /* Ember primary from the image core */
-  --primary: oklch(0.67 0.22 42);
-  --primary-foreground: oklch(0.13 0.02 40);
-
-  /* Warm neutrals */
-  --secondary: oklch(0.965 0.01 80);
-  --secondary-foreground: oklch(0.22 0.02 40);
-
-  --muted: oklch(0.965 0.01 80);
-  --muted-foreground: oklch(0.55 0.03 50);
-
-  --accent: oklch(0.965 0.01 80);
-  --accent-foreground: oklch(0.22 0.02 40);
-
-  /* System */
-  --destructive: oklch(0.62 0.23 28);
-  --border: oklch(0.92 0.01 80);
-  --input: oklch(0.92 0.01 80);
-
-  /* Golden ring that matches the beam glow */
-  --ring: oklch(0.82 0.17 84);
-
-  /* Charts: ember gradient */
-  --chart-1: oklch(0.86 0.16 84);  /* golden */
-  --chart-2: oklch(0.75 0.21 60);  /* amber */
-  --chart-3: oklch(0.67 0.22 42);  /* orange */
-  --chart-4: oklch(0.60 0.24 30);  /* red-orange */
-  --chart-5: oklch(0.52 0.20 20);  /* deep ember */
-
-  /* Sidebar */
-  --sidebar: oklch(0.985 0.01 90);
-  --sidebar-foreground: oklch(0.16 0.02 40);
-  --sidebar-primary: oklch(0.67 0.22 42);
-  --sidebar-primary-foreground: oklch(0.13 0.02 40);
-  --sidebar-accent: oklch(0.965 0.01 80);
-  --sidebar-accent-foreground: oklch(0.22 0.02 40);
-  --sidebar-border: oklch(0.92 0.01 80);
-  --sidebar-ring: oklch(0.82 0.17 84);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.141 0.005 285.823);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.141 0.005 285.823);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.141 0.005 285.823);
+  --primary: oklch(0.648 0.2 131.684);
+  --primary-foreground: oklch(0.986 0.031 120.757);
+  --secondary: oklch(0.967 0.001 286.375);
+  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --muted: oklch(0.967 0.001 286.375);
+  --muted-foreground: oklch(0.552 0.016 285.938);
+  --accent: oklch(0.967 0.001 286.375);
+  --accent-foreground: oklch(0.21 0.006 285.885);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.004 286.32);
+  --input: oklch(0.92 0.004 286.32);
+  --ring: oklch(0.841 0.238 128.85);
+  --chart-1: oklch(0.871 0.15 154.449);
+  --chart-2: oklch(0.723 0.219 149.579);
+  --chart-3: oklch(0.627 0.194 149.214);
+  --chart-4: oklch(0.527 0.154 150.069);
+  --chart-5: oklch(0.448 0.119 151.328);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.141 0.005 285.823);
+  --sidebar-primary: oklch(0.648 0.2 131.684);
+  --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
+  --sidebar-accent: oklch(0.967 0.001 286.375);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+  --sidebar-border: oklch(0.92 0.004 286.32);
+  --sidebar-ring: oklch(0.841 0.238 128.85);
 }
 
 .dark {
-  /* Base (dark: void with warm bias) */
-  --background: oklch(0.08 0.02 40);
-  --foreground: oklch(0.98 0.01 95);
-
-  --card: oklch(0.12 0.02 40);
-  --card-foreground: oklch(0.98 0.01 95);
-
-  --popover: oklch(0.12 0.02 40);
-  --popover-foreground: oklch(0.98 0.01 95);
-
-  /* Primary stays hot; reads like the image */
-  --primary: oklch(0.70 0.23 42);
-  --primary-foreground: oklch(0.13 0.02 40);
-
-  --secondary: oklch(0.16 0.02 40);
-  --secondary-foreground: oklch(0.98 0.01 95);
-
-  --muted: oklch(0.16 0.02 40);
-  --muted-foreground: oklch(0.72 0.02 70);
-
-  --accent: oklch(0.16 0.02 40);
-  --accent-foreground: oklch(0.98 0.01 95);
-
-  --destructive: oklch(0.68 0.22 28);
-
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.648 0.2 131.684);
+  --primary-foreground: oklch(0.986 0.031 120.757);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-
-  /* Ring tuned to glow on black */
-  --ring: oklch(0.78 0.18 84);
-
-  /* Charts keep the same “beam” family */
-  --chart-1: oklch(0.86 0.16 84);
-  --chart-2: oklch(0.75 0.21 60);
-  --chart-3: oklch(0.70 0.23 42);
-  --chart-4: oklch(0.62 0.24 30);
-  --chart-5: oklch(0.54 0.20 20);
-
-  --sidebar: oklch(0.10 0.02 40);
-  --sidebar-foreground: oklch(0.98 0.01 95);
-  --sidebar-primary: oklch(0.74 0.24 42);
-  --sidebar-primary-foreground: oklch(0.13 0.02 40);
-  --sidebar-accent: oklch(0.16 0.02 40);
-  --sidebar-accent-foreground: oklch(0.98 0.01 95);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.405 0.101 131.063);
+  --chart-1: oklch(0.871 0.15 154.449);
+  --chart-2: oklch(0.723 0.219 149.579);
+  --chart-3: oklch(0.627 0.194 149.214);
+  --chart-4: oklch(0.527 0.154 150.069);
+  --chart-5: oklch(0.448 0.119 151.328);
+  --sidebar: oklch(0.21 0.006 285.885);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.768 0.233 130.85);
+  --sidebar-primary-foreground: oklch(0.986 0.031 120.757);
+  --sidebar-accent: oklch(0.274 0.006 286.033);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.78 0.18 84);
+  --sidebar-ring: oklch(0.405 0.101 131.063);
 }
+
 
 @theme inline {
   --font-sans: var(--font-geist-sans);
@@ -146,6 +114,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-brand: var(--brand);
+  --color-highlight: var(--highlight);
 }
 
 @layer base {
@@ -156,7 +126,6 @@
     @apply bg-background text-foreground;
   }
 }
-
 
 /* Optional: if you actually use the image as a page background, add a readable overlay */
 .bg-ember-overlay {

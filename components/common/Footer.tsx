@@ -1,11 +1,11 @@
 "use client";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Logo from "../common/Logo";
+import { authClient } from "@/lib/auth-client";
 
 export function Footer() {
-  const { status } = useSession();
-  const isAuthenticated = status === "authenticated";
+  const { data, isPending } = authClient.useSession();
+  const isAuthenticated = !isPending && Boolean(data?.user);
   return (
     <footer className="relative border-t border-border bg-background/60 backdrop-blur-md supports-[backdrop-filter]:bg-background/50 overflow-hidden">
       <div className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">

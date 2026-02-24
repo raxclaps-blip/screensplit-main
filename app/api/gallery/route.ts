@@ -17,10 +17,11 @@ export async function GET(req: NextRequest) {
     const rawCursorId = searchParams.get('cursorId')
     const take = Number.isFinite(takeParam) ? Math.min(Math.max(1, takeParam), 60) : 24
 
-    const where = {
-      userId: session.user.id,
-      shareSlug: { not: null }
-    }
+      const where = {
+        userId: session.user.id,
+        shareSlug: { not: null },
+        finalImageUrl: { not: null },
+      }
 
     let cursor: { id: string } | undefined
     if (rawCursorId) {
@@ -35,21 +36,22 @@ export async function GET(req: NextRequest) {
 
     const projects = await prisma.project.findMany({
       where,
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        shareSlug: true,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          shareSlug: true,
         shareMessage: true,
         isPrivate: true,
         isPublic: true,
         viewCount: true,
         createdAt: true,
         updatedAt: true,
-        beforeLabel: true,
-        afterLabel: true,
-        layout: true,
-      },
+          beforeLabel: true,
+          afterLabel: true,
+          layout: true,
+          finalImageUrl: true,
+        },
       orderBy: [
         { createdAt: 'desc' },
         { id: 'desc' }

@@ -2,6 +2,7 @@
 const nextConfig = {
   poweredByHeader: false,
   cacheComponents: true,
+  serverExternalPackages: ['@ffmpeg-installer/ffmpeg'],
   typescript: {
     ignoreBuildErrors: false,
   },

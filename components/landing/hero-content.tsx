@@ -1,11 +1,11 @@
 "use client"
-import { useSession } from 'next-auth/react'
 import React from 'react'
 import Link from 'next/link'
 import { ArrowRight, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TextEffect } from '@/components/ui/text-effect'
 import { AnimatedGroup } from '@/components/ui/animated-group'
+import { authClient } from '@/lib/auth-client'
 
 const transitionVariants = {
     item: {
@@ -28,8 +28,8 @@ const transitionVariants = {
 } as const
 
 export function HeroContent() {
-    const { status } = useSession()
-    const isAuthenticated = status === 'authenticated'
+    const { data, isPending } = authClient.useSession()
+    const isAuthenticated = !isPending && Boolean(data?.user)
     return (
         <div className="mx-auto max-w-7xl px-6">
             <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0">

@@ -28,10 +28,6 @@ export default function ScreensplitPage() {
     <>
       {!showEditor ? (
         <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="mb-8 text-center">
-            <h1 className="mb-2 text-3xl font-bold">Create Your Comparison</h1>
-            <p className="text-muted-foreground">Upload your before and after images to get started</p>
-          </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <ImageUploader

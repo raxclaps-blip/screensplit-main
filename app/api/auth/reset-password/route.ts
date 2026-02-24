@@ -38,22 +38,37 @@ export async function POST(request: NextRequest) {
         return { ok: false }
       }
       await tx.passwordResetToken.delete({ where: { token: tokenRow.token } })
-      try {
-        await tx.user.update({
-          where: { email: tokenRow.email },
-          data: {
-            password: hashedPassword,
-            tokenVersion: { increment: 1 },
+      const updatedUser = await tx.user.update({
+        where: { email: tokenRow.email },
+        data: {
+          password: hashedPassword,
+          tokenVersion: { increment: 1 },
+        },
+        select: {
+          id: true,
+        },
+      })
+
+      await tx.account.upsert({
+        where: {
+          provider_providerAccountId: {
+            provider: "credential",
+            providerAccountId: updatedUser.id,
           },
-        })
-      } catch {
-        await tx.user.update({
-          where: { email: tokenRow.email },
-          data: {
-            password: hashedPassword,
-          },
-        })
-      }
+        },
+        create: {
+          userId: updatedUser.id,
+          type: "credentials",
+          provider: "credential",
+          providerAccountId: updatedUser.id,
+          password: hashedPassword,
+        },
+        update: {
+          userId: updatedUser.id,
+          type: "credentials",
+          password: hashedPassword,
+        },
+      })
       return { ok: true }
     })
 
