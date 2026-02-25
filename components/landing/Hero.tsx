@@ -1,116 +1,165 @@
 "use client";
 
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, Play, Lock, Sparkles, Layers, Image as ImageIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
+import React from 'react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import Image from 'next/image'
+import { TextEffect } from '@/components/ui/text-effect'
+import { AnimatedGroup } from '@/components/ui/animated-group'
+import { authClient } from '@/lib/auth-client'
 
-export function Hero() {
-    const { data: session, isPending } = authClient.useSession();
-    const isAuthenticated = !isPending && Boolean(session?.user);
-    const primaryCtaHref = isAuthenticated ? "/apps/dashboard" : "/auth/signup";
-    const primaryCtaLabel = isAuthenticated ? "Go to Dashboard" : "Create a Comparison";
-    const secondaryCtaHref = isAuthenticated ? "/apps/screensplit" : "#demo";
-    const secondaryCtaLabel = isAuthenticated ? "Open Editor" : "See a Demo";
-
-    const scrollToDemo = (e: React.MouseEvent<HTMLElement>) => {
-        if (isAuthenticated) {
-            return;
-        }
-        e.preventDefault();
-        const demoEl = document.getElementById("demo");
-        if (demoEl) {
-            demoEl.scrollIntoView({ behavior: "smooth" });
-        }
-    };
-
-    return (
-        <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden mx-auto container px-4 sm:px-6">
-            {/* No Background decorations (Removed gradients) */}
-
-            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
-
-                {/* Text Content */}
-                <div className="flex-1 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-forwards">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-sm font-medium mb-6">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                        <span>Before & After Maker</span>
-                    </div>
-
-                    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
-                        Before & after photos made simple.
-                    </h1>
-
-                    <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
-                        Upload two images. Export a stunning comparison in seconds.
-                    </p>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-4">
-                        <Button size="lg" className="w-full sm:w-auto text-base h-14 px-8 rounded-full" asChild>
-                            <Link href={primaryCtaHref}>
-                                {primaryCtaLabel}
-                                <ArrowRight className="w-4 h-4 ml-2" />
-                            </Link>
-                        </Button>
-                        <Button size="lg" variant="outline" className="w-full sm:w-auto text-base h-14 px-8 rounded-full bg-background/50 backdrop-blur-sm" onClick={scrollToDemo} asChild>
-                            <Link href={secondaryCtaHref}>
-                                {secondaryCtaLabel}
-                                {isAuthenticated ? (
-                                    <ArrowRight className="w-4 h-4 ml-2" />
-                                ) : (
-                                    <Play className="w-4 h-4 ml-2" />
-                                )}
-                            </Link>
-                        </Button>
-                    </div>
-
-                    <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-muted-foreground/80 mt-6">
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Private by default. Delete anytime.</span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mt-10">
-                        <Badge icon={<Layers className="w-3.5 h-3.5" />} text="Split Image" />
-                        <Badge icon={<ImageIcon className="w-3.5 h-3.5" />} text="Swipe Slider" />
-                        <Badge icon={<Play className="w-3.5 h-3.5" />} text="Reels-ready Exports" />
-                    </div>
-                </div>
-
-                {/* Visual / Demo */}
-                <div className="flex-1 w-full max-w-2xl mx-auto lg:mr-0 relative z-10 animate-in fade-in lg:slide-in-from-right-8 duration-700 delay-200 fill-mode-both">
-                    <div className="relative rounded-2xl border bg-card/50 backdrop-blur-sm shadow-xl overflow-hidden p-2 sm:p-4 flex items-center justify-center">
-                        <div className="w-full relative shadow-inner ring-1 ring-border/50 rounded-xl overflow-hidden bg-muted">
-                            <Image
-                                src="/app-preview-lightmode.png"
-                                alt="Screensplit App Preview - Light Mode"
-                                width={1200}
-                                height={900}
-                                className="w-full h-auto object-cover dark:hidden"
-                                priority
-                            />
-                            <Image
-                                src="/app-preview-darkmode.png"
-                                alt="Screensplit App Preview - Dark Mode"
-                                width={1200}
-                                height={900}
-                                className="w-full h-auto object-cover hidden dark:block"
-                                priority
-                            />
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </section>
-    );
+const transitionVariants = {
+    item: {
+        hidden: {
+            opacity: 0,
+            filter: 'blur(12px)',
+            y: 12,
+        },
+        visible: {
+            opacity: 1,
+            filter: 'blur(0px)',
+            y: 0,
+            transition: {
+                type: 'spring' as const,
+                bounce: 0.3,
+                duration: 1.5,
+            },
+        },
+    },
 }
 
-function Badge({ icon, text }: { icon: React.ReactNode; text: string }) {
+const darkImages = [
+    "https://cdn.saverifiednews.co.za/frontend/dark-1.avif",
+    "https://cdn.saverifiednews.co.za/frontend/dark-2.avif"
+]
+
+const lightImages = [
+    "https://cdn.saverifiednews.co.za/frontend/light-1.avif",
+    "https://cdn.saverifiednews.co.za/frontend/light-2.avif"
+]
+
+export function Hero() {
+    const [currentImageIndex, setCurrentImageIndex] = React.useState(0)
+    const { data: session, isPending } = authClient.useSession()
+    const isAuthenticated = !isPending && Boolean(session?.user)
+    const primaryCtaHref = isAuthenticated ? "/apps/screensplit" : "/auth/signup"
+    const primaryCtaLabel = isAuthenticated ? "Open Editor" : "Create Free Account"
+    const secondaryCtaHref = isAuthenticated ? "/apps/dashboard" : "/auth/signin"
+    const secondaryCtaLabel = isAuthenticated ? "Dashboard" : "Sign in"
+
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentImageIndex((prev) => (prev + 1) % darkImages.length)
+        }, 5000)
+        return () => clearInterval(interval)
+    }, [])
+
     return (
-        <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-secondary/30 text-secondary-foreground border border-secondary/20">
-            {icon}
-            {text}
-        </div>
-    );
+        <>
+            <main className="overflow-hidden">
+                <div
+                    aria-hidden
+                    className="absolute inset-0 isolate hidden contain-strict lg:block">
+                    <div className="w-140 h-320 -translate-y-87.5 absolute left-0 top-0 -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,hsla(0,0%,85%,.08)_0,hsla(0,0%,55%,.02)_50%,hsla(0,0%,45%,0)_80%)]" />
+                    <div className="h-320 absolute left-0 top-0 w-60 -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.06)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)] [translate:5%_-50%]" />
+                    <div className="h-320 -translate-y-87.5 absolute left-0 top-0 w-60 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.04)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
+                </div>
+                <section>
+                    <div className="relative pt-24">
+                        <div className="absolute inset-0 -z-10 size-full [background:radial-gradient(125%_125%_at_50%_100%,transparent_0%,var(--color-background)_75%)]"></div>
+                        <div className="mx-auto max-w-5xl px-6">
+                            <div className="sm:mx-auto lg:mr-auto lg:mt-0">
+                                <TextEffect
+                                    preset="fade-in-blur"
+                                    speedSegment={0.3}
+                                    as="h1"
+                                    className="mt-8 max-w-2xl text-balance text-5xl font-medium md:text-6xl lg:mt-16">
+                                    Make better before/after visuals.
+                                </TextEffect>
+                                <TextEffect
+                                    per="line"
+                                    preset="fade-in-blur"
+                                    speedSegment={0.3}
+                                    delay={0.5}
+                                    as="p"
+                                    className="mt-8 max-w-2xl text-pretty text-lg">
+                                    Upload, style, and export comparison images in seconds.
+                                </TextEffect>
+
+                                <AnimatedGroup
+                                    variants={{
+                                        container: {
+                                            visible: {
+                                                transition: {
+                                                    staggerChildren: 0.05,
+                                                    delayChildren: 0.75,
+                                                },
+                                            },
+                                        },
+                                        ...transitionVariants,
+                                    }}
+                                    className="mt-12 flex items-center gap-2">
+                                    <div
+                                        key={1}
+                                        className="bg-foreground/10 rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5">
+                                        <Button
+                                            asChild
+                                            size="lg"
+                                            className="rounded-xl px-5 text-base">
+                                            <Link href={primaryCtaHref}>
+                                                <span className="text-nowrap">{primaryCtaLabel}</span>
+                                            </Link>
+                                        </Button>
+                                    </div>
+                                    <Button
+                                        key={2}
+                                        asChild
+                                        size="lg"
+                                        variant="ghost"
+                                        className="h-10.5 rounded-xl px-5 text-base">
+                                        <Link href={secondaryCtaHref}>
+                                            <span className="text-nowrap">{secondaryCtaLabel}</span>
+                                        </Link>
+                                    </Button>
+                                </AnimatedGroup>
+                            </div>
+                        </div>
+                        <AnimatedGroup
+                            variants={{
+                                container: {
+                                    visible: {
+                                        transition: {
+                                            staggerChildren: 0.05,
+                                            delayChildren: 0.75,
+                                        },
+                                    },
+                                },
+                                ...transitionVariants,
+                            }}>
+                            <div className="mask-b-from-55% relative -mr-56 mt-8 overflow-hidden px-2 sm:mr-0 sm:mt-12 md:mt-20">
+                                <div className="inset-shadow-2xs ring-background dark:inset-shadow-white/20 bg-background relative mx-auto max-w-5xl overflow-hidden rounded-2xl border p-4 shadow-lg shadow-zinc-950/15 ring-1">
+                                    <Image
+                                        className="bg-background aspect-15/8 relative hidden rounded-2xl dark:block transition-opacity duration-1000 object-cover object-top"
+                                        src={darkImages[currentImageIndex]}
+                                        alt="app screen dark"
+                                        width={2700}
+                                        height={1440}
+                                        priority
+                                    />
+                                    <Image
+                                        className="z-2 border-border/25 aspect-15/8 relative rounded-2xl border dark:hidden transition-opacity duration-1000 object-cover object-top"
+                                        src={lightImages[currentImageIndex]}
+                                        alt="app screen light"
+                                        width={2700}
+                                        height={1440}
+                                        priority
+                                    />
+                                </div>
+                            </div>
+                        </AnimatedGroup>
+                    </div>
+                </section>
+            </main>
+        </>
+    )
 }

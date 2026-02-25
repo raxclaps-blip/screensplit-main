@@ -9,9 +9,10 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Download, ImageUp, Loader2, Type } from "lucide-react"
+import { Download, ImageUp, Loader2, Type, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth-client"
+import { ShareDialog } from "@/components/screensplit/share-dialog"
 
 const DESIGNER_PLACEHOLDER_LIGHT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" fill="none"><rect width="1200" height="1200" fill="#EAEAEA" rx="3"/><g opacity=".5"><g opacity=".5"><path fill="#FAFAFA" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/><path stroke="#C9C9C9" stroke-width="2.418" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/></g><path stroke="url(#a)" stroke-width="2.418" d="M0-1.209h553.581" transform="scale(1 -1) rotate(45 1163.11 91.165)"/><path stroke="url(#b)" stroke-width="2.418" d="M404.846 598.671h391.726"/><path stroke="url(#c)" stroke-width="2.418" d="M599.5 795.742V404.017"/><path stroke="url(#d)" stroke-width="2.418" d="m795.717 796.597-391.441-391.44"/><path fill="#fff" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/><g clip-path="url(#e)"><path fill="#666" fill-rule="evenodd" d="M616.426 586.58h-31.434v16.176l3.553-3.554.531-.531h9.068l.074-.074 8.463-8.463h2.565l7.18 7.181V586.58Zm-15.715 14.654 3.698 3.699 1.283 1.282-2.565 2.565-1.282-1.283-5.2-5.199h-6.066l-5.514 5.514-.073.073v2.876a2.418 2.418 0 0 0 2.418 2.418h26.598a2.418 2.418 0 0 0 2.418-2.418v-8.317l-8.463-8.463-7.181 7.181-.071.072Zm-19.347 5.442v4.085a6.045 6.045 0 0 0 6.046 6.045h26.598a6.044 6.044 0 0 0 6.045-6.045v-7.108l1.356-1.355-1.282-1.283-.074-.073v-17.989h-38.689v23.43l-.146.146.146.147Z" clip-rule="evenodd"/></g><path stroke="#C9C9C9" stroke-width="2.418" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/></g><defs><linearGradient id="a" x1="554.061" x2="-.48" y1=".083" y2=".087" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="b" x1="796.912" x2="404.507" y1="599.963" y2="599.965" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="c" x1="600.792" x2="600.794" y1="403.677" y2="796.082" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="d" x1="404.85" x2="796.972" y1="403.903" y2="796.02" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><clipPath id="e"><path fill="#fff" d="M581.364 580.535h38.689v38.689h-38.689z"/></clipPath></defs></svg>`
 const DESIGNER_PLACEHOLDER_DARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200" fill="none"><rect width="1200" height="1200" fill="#0D0D0D" rx="3"/><g opacity=".5"><g opacity=".5"><path fill="#1E1E1E" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/><path stroke="#333333" stroke-width="2.418" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/></g><path stroke="url(#a)" stroke-width="2.418" d="M0-1.209h553.581" transform="scale(1 -1) rotate(45 1163.11 91.165)"/><path stroke="url(#b)" stroke-width="2.418" d="M404.846 598.671h391.726"/><path stroke="url(#c)" stroke-width="2.418" d="M599.5 795.742V404.017"/><path stroke="url(#d)" stroke-width="2.418" d="m795.717 796.597-391.441-391.44"/><path fill="#2C2C2C" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/><g clip-path="url(#e)"><path fill="#FFFFFF" fill-rule="evenodd" d="M616.426 586.58h-31.434v16.176l3.553-3.554.531-.531h9.068l.074-.074 8.463-8.463h2.565l7.18 7.181V586.58Zm-15.715 14.654 3.698 3.699 1.283 1.282-2.565 2.565-1.282-1.283-5.2-5.199h-6.066l-5.514 5.514-.073.073v2.876a2.418 2.418 0 0 0 2.418 2.418h26.598a2.418 2.418 0 0 0 2.418-2.418v-8.317l-8.463-8.463-7.181 7.181-.071.072Zm-19.347 5.442v4.085a6.045 6.045 0 0 0 6.046 6.045h26.598a6.044 6.044 0 0 0 6.045-6.045v-7.108l1.356-1.355-1.282-1.283-.074-.073v-17.989h-38.689v23.43l-.146.146.146.147Z" clip-rule="evenodd"/></g><path stroke="#333333" stroke-width="2.418" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/></g><defs><linearGradient id="a" x1="554.061" x2="-.48" y1=".083" y2=".087" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><linearGradient id="b" x1="796.912" x2="404.507" y1="599.963" y2="599.965" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><linearGradient id="c" x1="600.792" x2="600.794" y1="403.677" y2="796.082" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><linearGradient id="d" x1="404.85" x2="796.972" y1="403.903" y2="796.02" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><clipPath id="e"><path fill="#2C2C2C" d="M581.364 580.535h38.689v38.689h-38.689z"/></clipPath></defs></svg>`
@@ -195,6 +196,7 @@ export default function DesignerPage() {
   const headlineRef = useRef<HTMLTextAreaElement>(null)
   const sublineRef = useRef<HTMLTextAreaElement>(null)
   const objectUrlRef = useRef<string | null>(null)
+  const sharePreviewObjectUrlRef = useRef<string | null>(null)
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
   const [logoUrl, setLogoUrl] = useState("")
   const [logoAssetVersion, setLogoAssetVersion] = useState(() => Date.now())
@@ -217,12 +219,18 @@ export default function DesignerPage() {
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isLogoRemoving, setIsLogoRemoving] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isSavingToGallery, setIsSavingToGallery] = useState(false)
+  const [isSavedToGallery, setIsSavedToGallery] = useState(false)
   const [activeExportFormat, setActiveExportFormat] = useState<DesignerExportFormat | null>(null)
   const [mobileExportSheetOpen, setMobileExportSheetOpen] = useState(false)
   const [desktopExportMenuOpen, setDesktopExportMenuOpen] = useState(false)
   const [isMobileAccountMenuOpen, setIsMobileAccountMenuOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [shareSlug, setShareSlug] = useState<string | null>(null)
+  const [sharePreviewSrc, setSharePreviewSrc] = useState("")
   const [headlineScale, setHeadlineScale] = useState([7])
   const [showLogo, setShowLogo] = useState(true)
+  const [showLogoBackground, setShowLogoBackground] = useState(true)
   const [logoSize, setLogoSize] = useState([100])
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right")
   const [bottomOffset, setBottomOffset] = useState([6])
@@ -463,17 +471,21 @@ export default function DesignerPage() {
       const logoY = Math.max(12, Math.round(imageHeight * 0.035))
 
       ctx.save()
-      ctx.shadowColor = "rgba(0,0,0,0.38)"
-      ctx.shadowBlur = Math.round(logoPadding * 1.8)
-      ctx.shadowOffsetY = 2
-      ctx.fillStyle = "rgba(8,8,8,0.44)"
-      ctx.fillRect(logoX, logoY, logoContainerWidth, logoContainerHeight)
-      ctx.strokeStyle = "rgba(255,255,255,0.2)"
-      ctx.lineWidth = 1
-      ctx.strokeRect(logoX, logoY, logoContainerWidth, logoContainerHeight)
+      if (showLogoBackground) {
+        ctx.shadowColor = "rgba(0,0,0,0.38)"
+        ctx.shadowBlur = Math.round(logoPadding * 1.8)
+        ctx.shadowOffsetY = 2
+        ctx.fillStyle = "rgba(8,8,8,0.44)"
+        ctx.fillRect(logoX, logoY, logoContainerWidth, logoContainerHeight)
+        ctx.strokeStyle = "rgba(255,255,255,0.2)"
+        ctx.lineWidth = 1
+        ctx.strokeRect(logoX, logoY, logoContainerWidth, logoContainerHeight)
+      }
       ctx.shadowBlur = 0
       ctx.shadowOffsetY = 0
-      ctx.drawImage(logoImageElement, logoX + logoPadding, logoY + logoPadding, logoWidth, logoHeight)
+      const logoDrawX = showLogoBackground ? logoX + logoPadding : logoX
+      const logoDrawY = showLogoBackground ? logoY + logoPadding : logoY
+      ctx.drawImage(logoImageElement, logoDrawX, logoDrawY, logoWidth, logoHeight)
       ctx.restore()
     }
 
@@ -648,12 +660,16 @@ export default function DesignerPage() {
         const logoY = footerTop + Math.round((pillHeight - containerHeight) / 2)
 
         ctx.save()
-        ctx.fillStyle = "rgba(8,8,8,0.44)"
-        ctx.fillRect(logoX, logoY, containerWidth, containerHeight)
-        ctx.strokeStyle = "rgba(255,255,255,0.2)"
-        ctx.lineWidth = 1
-        ctx.strokeRect(logoX, logoY, containerWidth, containerHeight)
-        ctx.drawImage(logoImageElement, logoX + logoPadding, logoY + logoPadding, logoWidth, logoHeight)
+        if (showLogoBackground) {
+          ctx.fillStyle = "rgba(8,8,8,0.44)"
+          ctx.fillRect(logoX, logoY, containerWidth, containerHeight)
+          ctx.strokeStyle = "rgba(255,255,255,0.2)"
+          ctx.lineWidth = 1
+          ctx.strokeRect(logoX, logoY, containerWidth, containerHeight)
+        }
+        const logoDrawX = showLogoBackground ? logoX + logoPadding : logoX
+        const logoDrawY = showLogoBackground ? logoY + logoPadding : logoY
+        ctx.drawImage(logoImageElement, logoDrawX, logoDrawY, logoWidth, logoHeight)
         ctx.restore()
       }
     }
@@ -680,6 +696,7 @@ export default function DesignerPage() {
     imageElement,
     logoImageElement,
     showLogo,
+    showLogoBackground,
     logoSize,
     logoPosition,
     isBelowImageBlackoutMode,
@@ -785,6 +802,16 @@ export default function DesignerPage() {
   }, [belowImageBlackout, isBelowImageBlackoutMode])
 
   useEffect(() => () => clearImage(), [clearImage])
+
+  useEffect(
+    () => () => {
+      if (sharePreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(sharePreviewObjectUrlRef.current)
+        sharePreviewObjectUrlRef.current = null
+      }
+    },
+    [],
+  )
 
   useEffect(() => {
     if (!mobileExportSheetOpen && !desktopExportMenuOpen) return
@@ -1029,6 +1056,15 @@ export default function DesignerPage() {
       return
     }
 
+    setShareDialogOpen(false)
+    setShareSlug(null)
+    setSharePreviewSrc("")
+    setIsSavedToGallery(false)
+    if (sharePreviewObjectUrlRef.current) {
+      URL.revokeObjectURL(sharePreviewObjectUrlRef.current)
+      sharePreviewObjectUrlRef.current = null
+    }
+
     const objectUrl = URL.createObjectURL(file)
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current)
@@ -1057,39 +1093,51 @@ export default function DesignerPage() {
     if (file) loadFile(file)
   }
 
-  const exportCanvas = useCallback(async (format: DesignerExportFormat = DEFAULT_DESIGNER_EXPORT_FORMAT) => {
-    if (isExporting) return
+  const createExportBlob = useCallback(async (format: DesignerExportFormat = DEFAULT_DESIGNER_EXPORT_FORMAT) => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas) {
+      throw new Error("Please upload an image before exporting")
+    }
 
     const formatOption =
       DESIGNER_EXPORT_OPTIONS.find((option) => option.id === format) ??
       DESIGNER_EXPORT_OPTIONS[0]
 
-    const toastId = toast.loading(`Exporting ${formatOption.label} and saving to cloud...`)
-    setIsExporting(true)
-    setActiveExportFormat(formatOption.id)
-    setMobileExportSheetOpen(false)
-    setDesktopExportMenuOpen(false)
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, formatOption.mimeType, formatOption.quality)
+    )
+    if (!blob) {
+      throw new Error(`Could not export the design as ${formatOption.label}`)
+    }
 
-    try {
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, formatOption.mimeType, formatOption.quality)
-      )
-      if (!blob) {
-        throw new Error(`Could not export the design as ${formatOption.label}`)
-      }
+    const normalizedMimeType = formatOption.mimeType.toLowerCase()
+    const normalizedBlobType = blob.type.toLowerCase()
+    const requestedNonPngFormat = formatOption.id !== "png"
+    const blobMatchesFormat =
+      normalizedBlobType.length === 0 || normalizedBlobType === normalizedMimeType
 
-      const normalizedMimeType = formatOption.mimeType.toLowerCase()
-      const normalizedBlobType = blob.type.toLowerCase()
-      const requestedNonPngFormat = formatOption.id !== "png"
-      const blobMatchesFormat =
-        normalizedBlobType.length === 0 || normalizedBlobType === normalizedMimeType
+    if (requestedNonPngFormat && !blobMatchesFormat) {
+      throw new Error(`${formatOption.label} export is not supported by this browser`)
+    }
 
-      if (requestedNonPngFormat && !blobMatchesFormat) {
-        throw new Error(`${formatOption.label} export is not supported by this browser`)
-      }
+    const contentType =
+      normalizedBlobType.startsWith("image/")
+        ? normalizedBlobType
+        : normalizedMimeType
 
+    return { blob, formatOption, contentType }
+  }, [])
+
+  const saveBlobToGallery = useCallback(
+    async ({
+      blob,
+      formatOption,
+      contentType,
+    }: {
+      blob: Blob
+      formatOption: DesignerExportOption
+      contentType: string
+    }) => {
       const exportTitle = (showHeadline && headline.trim() ? headline.trim() : "Designer Export").slice(0, 120)
       const metadataPayload = {
         title: exportTitle,
@@ -1101,11 +1149,6 @@ export default function DesignerPage() {
         bgColor: "#000000",
         isPrivate: false,
       }
-
-      const contentType =
-        normalizedBlobType.startsWith("image/")
-          ? normalizedBlobType
-          : normalizedMimeType
 
       let shareSlug: string | null = null
       let pendingProjectId: string | null = null
@@ -1227,27 +1270,87 @@ export default function DesignerPage() {
             : null
       }
 
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `designer-output.${formatOption.extension}`
-      link.click()
-      URL.revokeObjectURL(url)
+      if (!shareSlug) {
+        throw new Error("Image saved, but no share link was returned")
+      }
 
-      toast.success(`Exported as ${formatOption.label} and saved to cloud`, {
+      return shareSlug
+    },
+    [allTextColor, headline, headlineTextColor, showHeadline, useUnifiedTextColor],
+  )
+
+  const exportCanvas = useCallback(
+    async (format: DesignerExportFormat = DEFAULT_DESIGNER_EXPORT_FORMAT) => {
+      if (isExporting || isSavingToGallery) return
+
+      const formatOption =
+        DESIGNER_EXPORT_OPTIONS.find((option) => option.id === format) ??
+        DESIGNER_EXPORT_OPTIONS[0]
+
+      const toastId = toast.loading(`Exporting ${formatOption.label}...`)
+      setIsExporting(true)
+      setActiveExportFormat(formatOption.id)
+      setMobileExportSheetOpen(false)
+      setDesktopExportMenuOpen(false)
+
+      try {
+        const { blob, formatOption: resolvedOption } = await createExportBlob(format)
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement("a")
+        link.href = url
+        link.download = `designer-output.${resolvedOption.extension}`
+        link.click()
+        URL.revokeObjectURL(url)
+
+        toast.success(`Exported as ${resolvedOption.label}`, {
+          id: toastId,
+          description: "Downloaded to your device.",
+        })
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Export failed", { id: toastId })
+      } finally {
+        setIsExporting(false)
+        setActiveExportFormat(null)
+      }
+    },
+    [createExportBlob, isExporting, isSavingToGallery],
+  )
+
+  const saveToGallery = useCallback(async () => {
+    if (isSavingToGallery || isExporting) return
+
+    setIsSavingToGallery(true)
+    setIsSavedToGallery(false)
+    setMobileExportSheetOpen(false)
+    setDesktopExportMenuOpen(false)
+    const toastId = toast.loading("Saving to Gallery...")
+
+    try {
+      const exportResult = await createExportBlob(DEFAULT_DESIGNER_EXPORT_FORMAT)
+      const savedShareSlug = await saveBlobToGallery(exportResult)
+
+      if (sharePreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(sharePreviewObjectUrlRef.current)
+        sharePreviewObjectUrlRef.current = null
+      }
+
+      const previewUrl = URL.createObjectURL(exportResult.blob)
+      sharePreviewObjectUrlRef.current = previewUrl
+      setSharePreviewSrc(previewUrl)
+      setShareSlug(savedShareSlug)
+      setShareDialogOpen(true)
+      setIsSavedToGallery(true)
+
+      toast.success("Saved to Gallery", {
         id: toastId,
-        description:
-          shareSlug
-            ? `Saved to Gallery. Share URL: /share/${shareSlug}`
-            : `Saved to Gallery and downloaded as ${formatOption.label}.`,
+        description: "Share link is ready. Configure privacy and community settings in the popup.",
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Export failed", { id: toastId })
+      toast.error(error instanceof Error ? error.message : "Save failed", { id: toastId })
     } finally {
-      setIsExporting(false)
-      setActiveExportFormat(null)
+      setIsSavingToGallery(false)
     }
-  }, [allTextColor, headline, headlineTextColor, isExporting, showHeadline, useUnifiedTextColor])
+  }, [createExportBlob, isExporting, isSavingToGallery, saveBlobToGallery])
 
   return (
     <div className="w-full px-4 pt-10 pb-28 sm:px-6 lg:px-8 xl:h-[calc(100vh-4rem)] xl:overflow-hidden xl:pb-6 xl:pt-6">
@@ -1465,6 +1568,17 @@ export default function DesignerPage() {
             ) : (
               <p className="mt-2 text-xs text-muted-foreground">No saved logo yet.</p>
             )}
+            <div className="mt-2 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <Label htmlFor="show-logo-background">Logo Background</Label>
+                <Switch
+                  id="show-logo-background"
+                  checked={showLogoBackground}
+                  onCheckedChange={setShowLogoBackground}
+                  disabled={!logoUrl || !showLogo}
+                />
+              </div>
+            </div>
             <div className="mt-2 space-y-1.5">
               <div className="flex items-center justify-between text-xs">
                 <Label>Logo Size</Label>
@@ -1812,111 +1926,166 @@ export default function DesignerPage() {
 
       {shouldShowMobileExportButton && (
         <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+6.15rem)] right-4 z-[60] xl:hidden">
-        <div className="relative flex flex-col items-end">
-          <div
-            id="designer-export-sheet"
-            className={`absolute bottom-[calc(100%+0.65rem)] right-0 origin-bottom-right transition-all duration-200 ${
-              mobileExportSheetOpen
-                ? "translate-y-0 opacity-100 pointer-events-auto"
-                : "translate-y-3 opacity-0 pointer-events-none"
-            }`}
-          >
-            <div className="w-12 rounded-2xl border border-primary/80 bg-primary p-1.5 shadow-2xl backdrop-blur">
-              <div className="grid gap-1.5">
-                {DESIGNER_EXPORT_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => exportCanvas(option.id)}
-                    disabled={isExporting}
-                    className="rounded-md border border-border bg-background px-0 py-1.5 text-center text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-70"
-                  >
-                    {option.label}
-                  </button>
-                ))}
+          <div className="relative flex items-end gap-2">
+            <Button
+              type="button"
+              onClick={() => void saveToGallery()}
+              disabled={isSavingToGallery || isExporting}
+              size="icon"
+              aria-label={isSavingToGallery ? "Saving to gallery" : "Save to gallery"}
+              className={`h-12 w-12 rounded-full p-0 shadow-xl ${
+                isSavedToGallery ? "bg-emerald-600 hover:bg-emerald-600/90" : ""
+              }`}
+            >
+              {isSavingToGallery ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              <span className="sr-only">
+                {isSavingToGallery ? "Saving to gallery" : isSavedToGallery ? "Saved to gallery" : "Save to gallery"}
+              </span>
+            </Button>
+
+            <div className="relative flex flex-col items-end">
+              <div
+                id="designer-export-sheet"
+                className={`absolute bottom-[calc(100%+0.65rem)] right-0 origin-bottom-right transition-all duration-200 ${
+                  mobileExportSheetOpen
+                    ? "translate-y-0 opacity-100 pointer-events-auto"
+                    : "translate-y-3 opacity-0 pointer-events-none"
+                }`}
+              >
+                <div className="w-12 rounded-2xl border border-primary/80 bg-primary p-1.5 shadow-2xl backdrop-blur">
+                  <div className="grid gap-1.5">
+                    {DESIGNER_EXPORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => exportCanvas(option.id)}
+                        disabled={isExporting || isSavingToGallery}
+                        className="rounded-md border border-border bg-background px-0 py-1.5 text-center text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-70"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
+
+              <Button
+                type="button"
+                onClick={() => setMobileExportSheetOpen((previous) => !previous)}
+                disabled={isExporting || isSavingToGallery}
+                size="icon"
+                aria-expanded={mobileExportSheetOpen}
+                aria-controls="designer-export-sheet"
+                aria-label={isExporting ? "Exporting design" : "Open export options"}
+                className="h-12 w-12 rounded-full p-0 shadow-xl"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="sr-only">Exporting design</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    <span className="sr-only">Open export options</span>
+                  </>
+                )}
+              </Button>
             </div>
           </div>
-
-          <Button
-            type="button"
-            onClick={() => setMobileExportSheetOpen((previous) => !previous)}
-            disabled={isExporting}
-            size="icon"
-            aria-expanded={mobileExportSheetOpen}
-            aria-controls="designer-export-sheet"
-            aria-label={isExporting ? "Exporting design" : "Open export options"}
-            className="h-12 w-12 rounded-full p-0 shadow-xl"
-          >
-            {isExporting ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="sr-only">Exporting design</span>
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4" />
-                <span className="sr-only">Open export options</span>
-              </>
-            )}
-          </Button>
-        </div>
         </div>
       )}
 
       {shouldShowDesktopExportButton && (
         <div className="fixed bottom-8 right-[calc(360px+1rem)] z-[60] hidden xl:block">
-          <div ref={desktopExportMenuRef} className="relative flex flex-col items-end">
-            <div
-              id="designer-desktop-export-menu"
-              className={`absolute bottom-[calc(100%+0.65rem)] right-0 origin-bottom-right transition-all duration-200 ${
-                desktopExportMenuOpen
-                  ? "translate-y-0 opacity-100 pointer-events-auto"
-                  : "translate-y-3 opacity-0 pointer-events-none"
-              }`}
-            >
-              <div className="w-12 rounded-2xl border border-primary/80 bg-primary p-1.5 shadow-2xl backdrop-blur">
-                <div className="grid gap-1.5">
-                  {DESIGNER_EXPORT_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => exportCanvas(option.id)}
-                      disabled={isExporting}
-                      className="rounded-md border border-border bg-background px-0 py-1.5 text-center text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-70"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
+          <div ref={desktopExportMenuRef} className="relative flex items-end gap-2">
             <Button
               type="button"
-              onClick={() => setDesktopExportMenuOpen((previous) => !previous)}
-              disabled={isExporting}
-              size="icon"
-              aria-expanded={desktopExportMenuOpen}
-              aria-controls="designer-desktop-export-menu"
-              aria-label={isExporting ? "Exporting design" : "Open export options"}
-              className="h-12 w-12 rounded-full p-0 shadow-xl"
+              onClick={() => void saveToGallery()}
+              disabled={isSavingToGallery || isExporting}
+              className={`h-12 rounded-full px-4 text-sm font-semibold shadow-xl ${
+                isSavedToGallery ? "bg-emerald-600 text-white hover:bg-emerald-600/90" : ""
+              }`}
             >
-              {isExporting ? (
+              {isSavingToGallery ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="sr-only">{`Exporting ${activeExportOption?.label || "..."}`}</span>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4" />
-                  <span className="sr-only">Open export options</span>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {isSavedToGallery ? "Saved" : "Save to Gallery"}
                 </>
               )}
             </Button>
+
+            <div className="relative flex flex-col items-end">
+              <div
+                id="designer-desktop-export-menu"
+                className={`absolute bottom-[calc(100%+0.65rem)] right-0 origin-bottom-right transition-all duration-200 ${
+                  desktopExportMenuOpen
+                    ? "translate-y-0 opacity-100 pointer-events-auto"
+                    : "translate-y-3 opacity-0 pointer-events-none"
+                }`}
+              >
+                <div className="w-12 rounded-2xl border border-primary/80 bg-primary p-1.5 shadow-2xl backdrop-blur">
+                  <div className="grid gap-1.5">
+                    {DESIGNER_EXPORT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => exportCanvas(option.id)}
+                        disabled={isExporting || isSavingToGallery}
+                        className="rounded-md border border-border bg-background px-0 py-1.5 text-center text-[10px] font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-70"
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={() => setDesktopExportMenuOpen((previous) => !previous)}
+                disabled={isExporting || isSavingToGallery}
+                size="icon"
+                aria-expanded={desktopExportMenuOpen}
+                aria-controls="designer-desktop-export-menu"
+                aria-label={isExporting ? "Exporting design" : "Open export options"}
+                className="h-12 w-12 rounded-full p-0 shadow-xl"
+              >
+                {isExporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="sr-only">{`Exporting ${activeExportOption?.label || "..."}`}</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    <span className="sr-only">Open export options</span>
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       )}
+
+      {shareSlug && sharePreviewSrc ? (
+        <ShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          imagePreviewSrc={sharePreviewSrc}
+          slug={shareSlug}
+          initialIsPrivate={false}
+        />
+      ) : null}
     </div>
   )
 }

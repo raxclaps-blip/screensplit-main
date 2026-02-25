@@ -86,6 +86,13 @@ export default function GalleryPage() {
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
   const isFetchingRef = useRef(false)
 
+  const clearBodyPointerLock = useCallback(() => {
+    if (typeof document === "undefined") return
+    if (document.body.style.pointerEvents === "none") {
+      document.body.style.pointerEvents = ""
+    }
+  }, [])
+
   const fetchProjects = useCallback(async (cursorId?: string, append: boolean = false, silent: boolean = false) => {
     if (isFetchingRef.current) return
     isFetchingRef.current = true
@@ -204,10 +211,12 @@ export default function GalleryPage() {
       })
 
       if (response.ok) {
-        setProjects(prev => prev.filter(p => p.id !== projectToDelete.id))
-        toast.success('Deleted', { description: 'Project deleted successfully', id: toastId })
+        const deletedProjectId = projectToDelete.id
         setDeleteDialogOpen(false)
         setProjectToDelete(null)
+        setProjects(prev => prev.filter(p => p.id !== deletedProjectId))
+        requestAnimationFrame(clearBodyPointerLock)
+        toast.success('Deleted', { description: 'Project deleted successfully', id: toastId })
       } else {
         toast.error('Delete failed', { description: 'Failed to delete project', id: toastId })
       }
@@ -217,7 +226,15 @@ export default function GalleryPage() {
     } finally {
       setIsDeleting(false)
     }
-  }, [projectToDelete])
+  }, [clearBodyPointerLock, projectToDelete])
+
+  useEffect(() => {
+    if (deleteDialogOpen || imagePreviewOpen || shareDialogOpen) return
+    const timer = window.setTimeout(() => {
+      clearBodyPointerLock()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [clearBodyPointerLock, deleteDialogOpen, imagePreviewOpen, shareDialogOpen])
 
   const handleOpenImagePreview = useCallback((project: Project) => {
     setPreviewProject(project)
@@ -520,14 +537,14 @@ export default function GalleryPage() {
               />
             </div>
 
-            <DialogFooter className="mt-4 flex-col gap-3 border-t border-muted/30 pt-3 pb-[max(env(safe-area-inset-bottom),0.25rem)] sm:mt-6 sm:flex-row sm:pt-4">
-              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:gap-3">
+            <DialogFooter className="mt-4 border-t border-muted/30 pt-3 pb-[max(env(safe-area-inset-bottom),0.25rem)] sm:mt-6 sm:pt-4">
+              <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <Button
                   variant="secondary"
                   onClick={() => {
                     copyShareLink(previewProject)
                   }}
-                  className="w-full sm:flex-none rounded-full px-4 sm:px-6 transition-all hover:bg-secondary/80 border-border"
+                  className="w-full rounded-full px-4 transition-all hover:bg-secondary/80 border-border"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Copy Link
@@ -537,25 +554,34 @@ export default function GalleryPage() {
                   onClick={() => {
                     downloadImage(previewProject)
                   }}
-                  className="w-full sm:flex-none rounded-full px-4 sm:px-6 transition-all hover:bg-secondary/80 border-border"
+                  className="w-full rounded-full px-4 transition-all hover:bg-secondary/80 border-border"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
+                <Button
+                  onClick={() => setImagePreviewOpen(false)}
+                  className="w-full rounded-full px-4 shadow-lg shadow-primary/10 sm:col-span-2 lg:col-span-1"
+                >
+                  Close
+                </Button>
               </div>
-              <Button
-                onClick={() => setImagePreviewOpen(false)}
-                className="w-full rounded-full px-8 shadow-lg shadow-primary/10 sm:w-auto"
-              >
-                Close
-              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open)
+          if (!open) {
+            setProjectToDelete(null)
+            requestAnimationFrame(clearBodyPointerLock)
+          }
+        }}
+      >
         <AlertDialogContent className="rounded-3xl max-w-md border-muted/50">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-bold">Delete Project?</AlertDialogTitle>

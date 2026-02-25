@@ -31,7 +31,6 @@ export async function getFeaturedCommunityComparisons(take = 12): Promise<Commun
         const projects = await prisma.project.findMany({
           where: {
             shareSlug: { not: null },
-            finalImageUrl: { not: null },
             isPrivate: false,
             isFeaturedInCommunity: true,
           },
@@ -73,7 +72,7 @@ export async function getFeaturedCommunityComparisons(take = 12): Promise<Commun
         return []
       }
     },
-    ["community-featured", String(normalizedTake)],
+    ["community-featured-v2", String(normalizedTake)],
     { tags: ["community-featured"] },
   )
 

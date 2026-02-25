@@ -80,19 +80,19 @@ export function GalleryCard({
             <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate font-semibold">
+                        <CardTitle className="line-clamp-2 break-words pr-2 text-lg font-semibold leading-tight">
                             {project.title || 'Untitled Comparison'}
                         </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1 font-medium">
+                        <p className="mt-1 line-clamp-1 text-sm font-medium text-muted-foreground">
                             {project.beforeLabel} vs {project.afterLabel}
                         </p>
                         {project.shareMessage && (
-                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2 italic">
-                                💬 {project.shareMessage}
+                            <p className="mt-2 line-clamp-2 break-words text-xs italic text-muted-foreground">
+                                {project.shareMessage}
                             </p>
                         )}
                     </div>
-                    <DropdownMenu>
+                    <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                             <Button
                                 variant="ghost"

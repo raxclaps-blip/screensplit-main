@@ -62,6 +62,7 @@ const DEFAULT_VALUES = {
 }
 
 type EditorState = typeof DEFAULT_VALUES
+const DIRECT_R2_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_R2_DIRECT_UPLOAD !== "false"
 
 export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -836,7 +837,13 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
       throw new Error("Unable to generate image file.")
     }
 
-    return { blob, fileExtension }
+    const normalizedBlobType = blob.type.toLowerCase()
+    const contentType =
+      normalizedBlobType.startsWith("image/")
+        ? normalizedBlobType
+        : mimeType
+
+    return { blob, fileExtension, contentType }
   }, [exportFormat, quality])
 
   const handleDownloadNow = useCallback(async () => {
@@ -863,10 +870,12 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
     let blob: Blob
     let fileExtension: string
+    let contentType: string
     try {
       const exported = await createExportBlob()
       blob = exported.blob
       fileExtension = exported.fileExtension
+      contentType = exported.contentType
     } catch (error) {
       toast.error("Save failed", {
         description: error instanceof Error ? error.message : "Unable to export image.",
@@ -887,32 +896,150 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     setIsUploading(true)
 
     try {
-      const formData = new FormData()
-      formData.append("image", blob, `screensplit-${Date.now()}.${fileExtension}`)
-      formData.append("layout", direction)
-      formData.append("beforeLabel", beforeText)
-      formData.append("afterLabel", afterText)
-      formData.append("beforeSubtext", beforeSubtext)
-      formData.append("afterSubtext", afterSubtext)
-      formData.append("fontSize", String(fontSize))
-      formData.append("textColor", textColor)
-      formData.append("bgColor", bgColor)
-      formData.append("textBgColor", textBgColor)
-      formData.append("textPosition", textPosition)
-      formData.append("exportFormat", exportFormat)
-
-      const response = await fetch("/api/upload-image", {
-        method: "POST",
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => null)
-        throw new Error(error?.error || "Failed to upload image")
+      const metadataPayload = {
+        layout: direction,
+        beforeLabel: beforeText,
+        afterLabel: afterText,
+        beforeSubtext,
+        afterSubtext,
+        fontSize,
+        textColor,
+        bgColor,
+        textBgColor,
+        textPosition,
+        exportFormat,
+        isPrivate: false,
       }
 
-      const data = await response.json()
-      setShareSlug(data.shareSlug)
+      let uploadedShareSlug: string | null = null
+      let pendingProjectId: string | null = null
+
+      try {
+        if (!DIRECT_R2_UPLOAD_ENABLED) {
+          throw new Error("Direct upload disabled")
+        }
+
+        const presignResponse = await fetch("/api/upload-image/presign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...metadataPayload,
+            fileExtension,
+            contentType,
+          }),
+        })
+
+        const presignData = await presignResponse.json().catch(() => ({}))
+        if (!presignResponse.ok) {
+          throw new Error(
+            typeof presignData?.error === "string"
+              ? presignData.error
+              : "Failed to initialize fast upload"
+          )
+        }
+
+        const projectId = typeof presignData?.projectId === "string" ? presignData.projectId : ""
+        const uploadUrl = typeof presignData?.uploadUrl === "string" ? presignData.uploadUrl : ""
+        const createdShareSlug =
+          typeof presignData?.shareSlug === "string" && presignData.shareSlug.length > 0
+            ? presignData.shareSlug
+            : null
+
+        if (!projectId || !uploadUrl) {
+          throw new Error("Invalid fast upload response")
+        }
+
+        pendingProjectId = projectId
+
+        const directUploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": contentType,
+          },
+          body: blob,
+        })
+
+        if (!directUploadResponse.ok) {
+          throw new Error(`Direct upload failed (${directUploadResponse.status})`)
+        }
+
+        const completeResponse = await fetch("/api/upload-image/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ projectId }),
+        })
+
+        const completeData = await completeResponse.json().catch(() => ({}))
+        if (!completeResponse.ok) {
+          throw new Error(
+            typeof completeData?.error === "string"
+              ? completeData.error
+              : "Failed to finalize fast upload"
+          )
+        }
+
+        pendingProjectId = null
+        uploadedShareSlug =
+          typeof completeData?.shareSlug === "string" && completeData.shareSlug.length > 0
+            ? completeData.shareSlug
+            : createdShareSlug
+      } catch (fastUploadError) {
+        if (pendingProjectId) {
+          await fetch("/api/upload-image/cancel", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ projectId: pendingProjectId }),
+          }).catch(() => null)
+        }
+
+        const formData = new FormData()
+        formData.append("image", blob, `screensplit-${Date.now()}.${fileExtension}`)
+        formData.append("layout", metadataPayload.layout)
+        formData.append("beforeLabel", metadataPayload.beforeLabel)
+        formData.append("afterLabel", metadataPayload.afterLabel)
+        formData.append("beforeSubtext", metadataPayload.beforeSubtext)
+        formData.append("afterSubtext", metadataPayload.afterSubtext)
+        formData.append("fontSize", String(metadataPayload.fontSize))
+        formData.append("textColor", metadataPayload.textColor)
+        formData.append("bgColor", metadataPayload.bgColor)
+        formData.append("textBgColor", metadataPayload.textBgColor)
+        formData.append("textPosition", metadataPayload.textPosition)
+        formData.append("exportFormat", metadataPayload.exportFormat)
+        formData.append("isPrivate", "false")
+
+        const fallbackResponse = await fetch("/api/upload-image", {
+          method: "POST",
+          body: formData,
+        })
+
+        const fallbackData = await fallbackResponse.json().catch(() => ({}))
+        if (!fallbackResponse.ok) {
+          const fastMessage =
+            fastUploadError instanceof Error ? fastUploadError.message : "Fast upload failed"
+          const fallbackMessage =
+            typeof fallbackData?.error === "string"
+              ? fallbackData.error
+              : "Failed to upload image"
+          throw new Error(`${fastMessage}. ${fallbackMessage}`)
+        }
+
+        uploadedShareSlug =
+          typeof fallbackData?.shareSlug === "string" && fallbackData.shareSlug.length > 0
+            ? fallbackData.shareSlug
+            : null
+      }
+
+      if (!uploadedShareSlug) {
+        throw new Error("Image saved, but no share link was returned")
+      }
+
+      setShareSlug(uploadedShareSlug)
       setShareDialogOpen(true)
       setIsCloudSaved(true)
       toast.success("Saved to cloud!", { description: "Share link is ready.", id: toastId })
