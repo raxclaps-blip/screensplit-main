@@ -11,4 +11,18 @@ const compat = new FlatCompat({
 
 export default [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    files: ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "JSXElement:has(JSXOpeningElement > JSXIdentifier[name='Scissors']):has(JSXText[value=/Screensplit/])",
+          message:
+            "Use the shared <Logo /> component instead of inline Scissors + Screensplit brand markup.",
+        },
+      ],
+    },
+  },
 ];

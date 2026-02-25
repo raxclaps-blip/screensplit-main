@@ -1,140 +1,116 @@
-import React from 'react'
-import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
-import Image from 'next/image'
-import { AnimatedGroup } from '@/components/ui/animated-group'
-import { HeroContent } from './hero-content'
+"use client";
 
-export default function HeroSection() {
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight, Play, Lock, Sparkles, Layers, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
+
+export function Hero() {
+    const { data: session, isPending } = authClient.useSession();
+    const isAuthenticated = !isPending && Boolean(session?.user);
+    const primaryCtaHref = isAuthenticated ? "/apps/dashboard" : "/auth/signup";
+    const primaryCtaLabel = isAuthenticated ? "Go to Dashboard" : "Create a Comparison";
+    const secondaryCtaHref = isAuthenticated ? "/apps/screensplit" : "#demo";
+    const secondaryCtaLabel = isAuthenticated ? "Open Editor" : "See a Demo";
+
+    const scrollToDemo = (e: React.MouseEvent<HTMLElement>) => {
+        if (isAuthenticated) {
+            return;
+        }
+        e.preventDefault();
+        const demoEl = document.getElementById("demo");
+        if (demoEl) {
+            demoEl.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+
     return (
-        <>
-            <main className="overflow-hidden border-b border-border">
-                <div
-                    aria-hidden
-                    className="absolute inset-0 isolate hidden opacity-65 contain-strict lg:block">
-                    <div className="w-140 h-320 -translate-y-87.5 absolute left-0 top-0 -rotate-45 rounded-full bg-[radial-gradient(68.54%_68.72%_at_55.02%_31.46%,hsla(0,0%,85%,.08)_0,hsla(0,0%,55%,.02)_50%,hsla(0,0%,45%,0)_80%)]" />
-                    <div className="h-320 absolute left-0 top-0 w-60 -rotate-45 rounded-full bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.06)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)] [translate:5%_-50%]" />
-                    <div className="h-320 -translate-y-87.5 absolute left-0 top-0 w-60 -rotate-45 bg-[radial-gradient(50%_50%_at_50%_50%,hsla(0,0%,85%,.04)_0,hsla(0,0%,45%,.02)_80%,transparent_100%)]" />
-                </div>
-                <section>
-                    <div className="relative pt-24 md:pt-36">
-                        <AnimatedGroup
-                            variants={{
-                                container: {
-                                    visible: {
-                                        transition: {
-                                            delayChildren: 1,
-                                        },
-                                    },
-                                },
-                                item: {
-                                    hidden: {
-                                        opacity: 0,
-                                        y: 20,
-                                    },
-                                    visible: {
-                                        opacity: 1,
-                                        y: 0,
-                                        transition: {
-                                            type: 'spring',
-                                            bounce: 0.3,
-                                            duration: 2,
-                                        },
-                                    },
-                                },
-                            }}
-                            className="mask-b-from-35% mask-b-to-90% absolute inset-0 top-56 -z-20 lg:top-32">
-                            <Image
-                                src="/app-preview-darkmode.avif"
-                                alt="app preview dark mode"
-                                className="hidden size-full dark:block"
-                                width="1024"
-                                height="600"
-                                priority
-                            />
-                            <Image
-                                src="/app-preview-lightmode.avif"
-                                alt="app preview light mode"
-                                className="size-full dark:hidden"
-                                width="1024"
-                                height="600"
-                                priority
-                            />
-                        </AnimatedGroup>
+        <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden mx-auto container px-4 sm:px-6">
+            {/* No Background decorations (Removed gradients) */}
 
-                        <div
-                            aria-hidden
-                            className="absolute inset-0 -z-10 size-full [background:radial-gradient(125%_125%_at_50%_100%,transparent_0%,var(--color-background)_75%)]"
-                        />
+            <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
 
-                        <HeroContent />
-
-                        <AnimatedGroup>
-                            <div className="mask-b-from-55% relative mx-auto mt-8 overflow-hidden px-4 sm:mt-12 md:mt-20">
-                                <div className="inset-shadow-2xs ring-background dark:inset-shadow-white/20 bg-background relative mx-auto max-w-6xl overflow-hidden rounded-2xl border p-2 shadow-lg shadow-zinc-950/15 ring-1 sm:p-4">
-                                    <Image
-                                        className="bg-background aspect-[16/10] w-full relative hidden rounded-xl dark:block sm:rounded-2xl"
-                                        src="/app-preview-darkmode.png"
-                                        alt="app screen dark mode"
-                                        width="1024"
-                                        height="600"
-                                        priority
-                                    />
-                                    <Image
-                                        className="z-2 border-border/25 aspect-[16/10] w-full relative rounded-xl border dark:hidden sm:rounded-2xl"
-                                        src="/app-preview-lightmode.png"
-                                        alt="app screen light mode"
-                                        width="1024"
-                                        height="600"
-                                        priority
-                                    />
-                                </div>
-                            </div>
-                        </AnimatedGroup>
+                {/* Text Content */}
+                <div className="flex-1 max-w-2xl mx-auto lg:mx-0 text-center lg:text-left z-10 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-forwards">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-muted/50 border border-border/50 text-sm font-medium mb-6">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                        <span>Before & After Maker</span>
                     </div>
-                </section>
-                <section className="bg-background pb-16 pt-16 md:pb-32">
-                    <div className="group relative m-auto max-w-5xl px-6">
-                        <div className="absolute inset-0 z-10 flex scale-95 items-center justify-center opacity-0 duration-500 group-hover:scale-100 group-hover:opacity-100">
-                            <Link
-                                href="/auth/signup"
-                                className="block text-sm duration-150 hover:opacity-75">
-                                <span>Start Creating Now</span>
-                                <ChevronRight className="ml-1 inline-block size-3" />
+
+                    <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
+                        Before & after photos made simple.
+                    </h1>
+
+                    <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                        Upload two images. Export a stunning comparison in seconds.
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-4">
+                        <Button size="lg" className="w-full sm:w-auto text-base h-14 px-8 rounded-full" asChild>
+                            <Link href={primaryCtaHref}>
+                                {primaryCtaLabel}
+                                <ArrowRight className="w-4 h-4 ml-2" />
                             </Link>
-                        </div>
-                        <div className="mx-auto grid max-w-4xl grid-cols-2 gap-8 transition-all duration-500 group-hover:blur-xs group-hover:opacity-50 md:grid-cols-4 md:gap-12">
-                            <div className="flex flex-col items-center text-center">
-                                <div className="text-3xl font-bold md:text-4xl">
-                                    10K+
-                                </div>
-                                <div className="text-muted-foreground mt-2 text-sm">Exports created</div>
-                            </div>
+                        </Button>
+                        <Button size="lg" variant="outline" className="w-full sm:w-auto text-base h-14 px-8 rounded-full bg-background/50 backdrop-blur-sm" onClick={scrollToDemo} asChild>
+                            <Link href={secondaryCtaHref}>
+                                {secondaryCtaLabel}
+                                {isAuthenticated ? (
+                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                ) : (
+                                    <Play className="w-4 h-4 ml-2" />
+                                )}
+                            </Link>
+                        </Button>
+                    </div>
 
-                            <div className="flex flex-col items-center text-center">
-                                <div className="text-3xl font-bold md:text-4xl">
-                                    5 sec
-                                </div>
-                                <div className="text-muted-foreground mt-2 text-sm">Average export time</div>
-                            </div>
+                    <div className="flex items-center justify-center lg:justify-start gap-2 text-sm text-muted-foreground/80 mt-6">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Private by default. Delete anytime.</span>
+                    </div>
 
-                            <div className="flex flex-col items-center text-center">
-                                <div className="text-3xl font-bold md:text-4xl">
-                                    100%
-                                </div>
-                                <div className="text-muted-foreground mt-2 text-sm">Client-side processing</div>
-                            </div>
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mt-10">
+                        <Badge icon={<Layers className="w-3.5 h-3.5" />} text="Split Image" />
+                        <Badge icon={<ImageIcon className="w-3.5 h-3.5" />} text="Swipe Slider" />
+                        <Badge icon={<Play className="w-3.5 h-3.5" />} text="Reels-ready Exports" />
+                    </div>
+                </div>
 
-                            <div className="flex flex-col items-center text-center">
-                                <div className="text-3xl font-bold md:text-4xl">
-                                    Free account
-                                </div>
-                                <div className="text-muted-foreground mt-2 text-sm">Sign up required</div>
-                            </div>
+                {/* Visual / Demo */}
+                <div className="flex-1 w-full max-w-2xl mx-auto lg:mr-0 relative z-10 animate-in fade-in lg:slide-in-from-right-8 duration-700 delay-200 fill-mode-both">
+                    <div className="relative rounded-2xl border bg-card/50 backdrop-blur-sm shadow-xl overflow-hidden p-2 sm:p-4 flex items-center justify-center">
+                        <div className="w-full relative shadow-inner ring-1 ring-border/50 rounded-xl overflow-hidden bg-muted">
+                            <Image
+                                src="/app-preview-lightmode.png"
+                                alt="Screensplit App Preview - Light Mode"
+                                width={1200}
+                                height={900}
+                                className="w-full h-auto object-cover dark:hidden"
+                                priority
+                            />
+                            <Image
+                                src="/app-preview-darkmode.png"
+                                alt="Screensplit App Preview - Dark Mode"
+                                width={1200}
+                                height={900}
+                                className="w-full h-auto object-cover hidden dark:block"
+                                priority
+                            />
                         </div>
                     </div>
-                </section>
-            </main>
-        </>
-    )
+                </div>
+
+            </div>
+        </section>
+    );
+}
+
+function Badge({ icon, text }: { icon: React.ReactNode; text: string }) {
+    return (
+        <div className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-secondary/30 text-secondary-foreground border border-secondary/20">
+            {icon}
+            {text}
+        </div>
+    );
 }

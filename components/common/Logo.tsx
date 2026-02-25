@@ -1,64 +1,37 @@
-import React from "react";
+import Image from "next/image"
+import { cn } from "@/lib/utils"
 
-const Logo = () => {
+type LogoProps = {
+  className?: string
+  size?: number
+  priority?: boolean
+}
+
+const Logo = ({ className, size = 34, priority = false }: LogoProps) => {
   return (
-    <div>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="34"
-        height="34"
-        viewBox="0 0 34 34"
-        role="img"
-        aria-label="Animated gradient square with vertical bar"
-      >
-        <defs>
-          <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ffffff">
-              <animate
-                attributeName="stop-color"
-                values="#ffffff;#d1d5db;#ffffff"
-                dur="3s"
-                repeatCount="indefinite"
-              />
-            </stop>
-            <stop offset="100%" stopColor="#9ca3af">
-              <animate
-                attributeName="stop-color"
-                values="#9ca3af;#6b7280;#9ca3af"
-                dur="3s"
-                repeatCount="indefinite"
-              />
-            </stop>
-          </linearGradient>
-        </defs>
+    <span
+      className={cn("relative inline-flex shrink-0", className)}
+      style={{ width: size, height: size }}
+      aria-label="Screensplit logo"
+    >
+      <Image
+        src="/logo-light-mode.svg"
+        alt="Screensplit"
+        width={size}
+        height={size}
+        priority={priority}
+        className="h-full w-full object-contain dark:hidden"
+      />
+      <Image
+        src="/logo-dark-mode.svg"
+        alt="Screensplit"
+        width={size}
+        height={size}
+        priority={priority}
+        className="hidden h-full w-full object-contain dark:block"
+      />
+    </span>
+  )
+}
 
-        <rect
-          x="0"
-          y="0"
-          width="32"
-          height="32"
-          rx="6"
-          ry="6"
-          fill="url(#grad)"
-        />
-
-        <rect x="15" y="8" width="2" height="16" rx="1" ry="1" fill="#000000">
-          <animate
-            attributeName="height"
-            values="8;16;8"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="y"
-            values="12;8;12"
-            dur="2s"
-            repeatCount="indefinite"
-          />
-        </rect>
-      </svg>
-    </div>
-  );
-};
-
-export default Logo;
+export default Logo

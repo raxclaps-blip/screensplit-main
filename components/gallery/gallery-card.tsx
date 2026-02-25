@@ -14,6 +14,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { toImageKitUrl } from "@/lib/imagekit"
 
 interface Project {
     id: string
@@ -57,10 +58,18 @@ export function GalleryCard({
     const [imageError, setImageError] = useState(false)
 
     const imageUrl = useMemo(() => {
-        if (!project.shareSlug || !project.finalImageUrl) return null
+        if (!project.finalImageUrl) return null
         const version = new Date(project.updatedAt).getTime()
+
+        if (!project.isPrivate) {
+            const optimizedUrl = toImageKitUrl(project.finalImageUrl)
+            const joinChar = optimizedUrl.includes("?") ? "&" : "?"
+            return `${optimizedUrl}${joinChar}v=${version}`
+        }
+
+        if (!project.shareSlug) return null
         return `/api/i/${project.shareSlug}?v=${version}`
-    }, [project.finalImageUrl, project.shareSlug, project.updatedAt])
+    }, [project.finalImageUrl, project.isPrivate, project.shareSlug, project.updatedAt])
 
     const handleImageClick = useCallback(() => {
         onPreview(project)
@@ -144,7 +153,6 @@ export function GalleryCard({
                             onError={() => setImageError(true)}
                             priority={prioritize}
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                            unoptimized // Serving via API route, Next.js optimization might not work directly without remote patterns
                         />
                     ) : null}
                 </div>

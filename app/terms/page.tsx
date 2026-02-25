@@ -1,20 +1,32 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileText, Scale, Shield } from "lucide-react";
-import { Navbar } from "@/components/common/Navbar";
-import { Footer } from "@/components/common/Footer";
 import { cacheLife } from "next/cache";
+import {
+  FileText,
+  Gavel,
+  Mail,
+  Scale,
+  Shield,
+  Sparkles,
+  UserCheck,
+} from "lucide-react";
+import { Header } from "@/components/landing/Header";
+import { Footer } from "@/components/landing/Footer";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Read Screensplit's Terms of Service. Learn about your rights, our responsibilities, and how we protect your content and privacy.",
+  description:
+    "Read Screensplit's Terms of Service, including acceptable use, ownership, limitations, and legal obligations.",
   openGraph: {
     title: "Terms of Service - Screensplit",
-    description: "Read Screensplit's Terms of Service. Learn about your rights and our responsibilities.",
+    description:
+      "Understand the rules, responsibilities, and legal terms for using Screensplit.",
   },
   twitter: {
     title: "Terms of Service - Screensplit",
-    description: "Read Screensplit's Terms of Service. Learn about your rights and our responsibilities.",
+    description:
+      "Understand the rules, responsibilities, and legal terms for using Screensplit.",
   },
   robots: {
     index: true,
@@ -22,203 +34,258 @@ export const metadata: Metadata = {
   },
 };
 
+const highlights = [
+  {
+    title: "You own your content",
+    description:
+      "Your uploaded assets and exports remain yours. We do not claim ownership over your content.",
+    icon: Shield,
+  },
+  {
+    title: "Use responsibly",
+    description:
+      "Do not use the service for illegal activity, abuse, infringement, or platform disruption.",
+    icon: UserCheck,
+  },
+  {
+    title: "Clear legal framework",
+    description:
+      "These terms define responsibilities, limitations, and dispute handling in plain language.",
+    icon: Scale,
+  },
+];
+
+const termsSections = [
+  {
+    id: "acceptance",
+    title: "1. Acceptance of terms",
+    content: [
+      "By accessing or using Screensplit, you agree to these Terms of Service. If you do not agree, do not use the service.",
+      "We may update these terms from time to time. Continued use after updates constitutes acceptance of the revised terms.",
+    ],
+  },
+  {
+    id: "service-description",
+    title: "2. Service description",
+    content: [
+      "Screensplit provides tools for before/after visual composition, export, and sharing workflows.",
+      "Features may evolve over time, including additions, adjustments, or removals to improve reliability and user experience.",
+    ],
+  },
+  {
+    id: "accounts",
+    title: "3. Accounts and access",
+    content: [
+      "Some features may require an account. You are responsible for keeping your account credentials secure and accurate.",
+      "You must not share access in a way that compromises account security or violates these terms.",
+    ],
+    bullets: [
+      "Provide accurate registration information",
+      "Maintain security of credentials",
+      "Notify us if account compromise is suspected",
+    ],
+  },
+  {
+    id: "user-content",
+    title: "4. User content and license",
+    content: [
+      "You retain ownership of content you create or upload. To operate the service, you grant us a limited license to process and store content solely for service delivery.",
+      "You represent that you have the rights needed to upload, process, and share any content used through Screensplit.",
+    ],
+    bullets: [
+      "No illegal or infringing content",
+      "No malware or malicious payloads",
+      "No harassment, abuse, or harmful exploitation",
+    ],
+  },
+  {
+    id: "acceptable-use",
+    title: "5. Acceptable use",
+    content: [
+      "You agree not to misuse the service, interfere with systems, or attempt unauthorized access.",
+      "Automated abuse, scraping at harmful scale, reverse engineering, or actions that degrade service quality are prohibited.",
+    ],
+  },
+  {
+    id: "ip-rights",
+    title: "6. Intellectual property",
+    content: [
+      "Screensplit and related platform assets (excluding user content) are protected by intellectual property laws.",
+      "You may not copy, redistribute, or create derivative works from proprietary service components without authorization.",
+    ],
+  },
+  {
+    id: "disclaimers",
+    title: "7. Disclaimers",
+    content: [
+      "Screensplit is provided on an 'as is' and 'as available' basis to the maximum extent permitted by law.",
+      "We do not guarantee uninterrupted operation, complete error elimination, or fitness for every specific use case.",
+    ],
+  },
+  {
+    id: "liability",
+    title: "8. Limitation of liability",
+    content: [
+      "To the extent permitted by law, Screensplit and its operators are not liable for indirect, incidental, consequential, or special damages.",
+      "Any direct liability is limited to the amount permitted under applicable law.",
+    ],
+  },
+  {
+    id: "termination",
+    title: "9. Suspension and termination",
+    content: [
+      "We may suspend or terminate access for violations of these terms, abuse, or security risks.",
+      "You may stop using the service at any time and may request account deletion where applicable.",
+    ],
+  },
+  {
+    id: "governing-law",
+    title: "10. Governing law",
+    content: [
+      "These terms are governed by the laws of the State of California, without regard to conflict-of-law principles.",
+      "Disputes will be handled in the courts located in San Francisco County, California, unless otherwise required by applicable law.",
+    ],
+  },
+];
+
 export default async function TermsPage() {
-  "use cache"
-  cacheLife("max")
+  "use cache";
+  cacheLife("max");
 
   return (
-    <div className="min-h-screen bg-background font-sans antialiased">
-      <Navbar />
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30">
+      <Header />
 
-        {/* Hero */}
-        <section className="border-b border-border">
-          <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
-            <div className="text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                <span>Effective Date: January 1, 2025</span>
+      <main className="flex-1 flex flex-col">
+        <div className="mx-auto w-full max-w-7xl divide-y divide-border border-x border-border">
+          <section className="relative overflow-hidden px-4 pb-20 pt-32 sm:px-6 md:pb-28 md:pt-40">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center dark:hidden">
+              <div className="h-[60vh] w-[70vw] rounded-full bg-primary/10 blur-[130px]" />
+            </div>
+
+            <div className="relative z-10 mx-auto max-w-4xl text-center">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/45 px-4 py-1.5 text-sm font-medium text-muted-foreground">
+                <FileText className="h-4 w-4 text-primary" />
+                Effective date: January 1, 2025
               </div>
-              <h1 className="mb-6 max-w-4xl mx-auto text-balance text-5xl font-bold leading-tight tracking-tight md:text-7xl">
+              <h1 className="mb-6 text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 Terms of Service
               </h1>
-              <p className="mb-10 max-w-2xl mx-auto text-pretty text-lg text-muted-foreground md:text-xl">
-                Please read these terms carefully before using Screensplit.
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
+                These terms govern your use of Screensplit and explain rights, obligations, and
+                service limitations.
               </p>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Key Points */}
-        <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-          <div className="grid gap-4 md:grid-cols-3 mb-12">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Shield className="h-6 w-6" />
+          <section className="px-4 py-14 sm:px-6 md:py-20">
+            <div className="mb-10 text-center">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/45 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Legal highlights
               </div>
-              <h3 className="mb-2 text-xl font-semibold">Your Rights</h3>
-              <p className="text-sm text-muted-foreground">
-                You retain all rights to your content. We don't claim ownership.
-              </p>
+              <h2 className="text-3xl font-bold tracking-tight md:text-5xl">Quick overview</h2>
             </div>
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <FileText className="h-6 w-6" />
+
+            <div className="grid gap-6 md:grid-cols-3">
+              {highlights.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <article
+                    key={item.title}
+                    className="rounded-[2rem] border border-border/50 bg-card/70 p-7 backdrop-blur-sm"
+                  >
+                    <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                      <Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold tracking-tight">{item.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="px-4 py-14 sm:px-6 md:py-20">
+            <div className="grid gap-6 lg:grid-cols-[0.34fr_0.66fr]">
+              <aside className="rounded-[2rem] border border-border/50 bg-card/70 p-6 backdrop-blur-sm lg:sticky lg:top-24 lg:h-fit">
+                <h2 className="mb-4 text-xl font-semibold tracking-tight">Sections</h2>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {termsSections.map((section) => (
+                    <li key={section.id}>
+                      <a href={`#${section.id}`} className="hover:text-foreground transition-colors">
+                        {section.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+
+              <div className="space-y-6">
+                {termsSections.map((section) => (
+                  <article
+                    key={section.id}
+                    id={section.id}
+                    className="rounded-[2rem] border border-border/50 bg-card/70 p-8 backdrop-blur-sm scroll-mt-28"
+                  >
+                    <h3 className="mb-4 text-2xl font-bold tracking-tight">{section.title}</h3>
+                    <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+                      {section.content.map((paragraph) => (
+                        <p key={paragraph}>{paragraph}</p>
+                      ))}
+                    </div>
+
+                    {section.bullets ? (
+                      <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                        {section.bullets.map((bullet) => (
+                          <li key={bullet}>{bullet}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </article>
+                ))}
               </div>
-              <h3 className="mb-2 text-xl font-semibold">Free Service</h3>
-              <p className="text-sm text-muted-foreground">
-                Core features are free with no hidden charges.
-              </p>
             </div>
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Scale className="h-6 w-6" />
+          </section>
+
+          <section className="px-4 py-16 sm:px-6 md:py-20">
+            <article className="rounded-[2rem] border border-border/50 bg-card/70 px-6 py-12 text-center backdrop-blur-sm sm:px-10">
+              <div className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                <Gavel className="h-5 w-5 text-primary" />
               </div>
-              <h3 className="mb-2 text-xl font-semibold">Fair Use</h3>
-              <p className="text-sm text-muted-foreground">
-                Use responsibly and respect others' rights.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Main Content */}
-        <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-          <div className="space-y-8">
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">
-                1. Acceptance of Terms
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
+                Questions about these terms?
               </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                By using Screensplit, you agree to these Terms. If you disagree,
-                please don't use our service. We may update these Terms;
-                continued use means acceptance of changes.
+              <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
+                Reach out to our legal team for clarification regarding interpretation or requests.
               </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">
-                2. Service Description
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-3">
-                Screensplit provides tools to create image and video
-                comparisons. Features include:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Before/after image comparisons</li>
-                <li>Video comparison tools</li>
-                <li>Image processing utilities</li>
-                <li>Gallery storage (with account)</li>
-                <li>Export functionality</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">3. User Accounts</h2>
-              <p className="text-muted-foreground leading-relaxed mb-3">
-                If you create an account:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Provide accurate information</li>
-                <li>Must be 13+ years old</li>
-                <li>Keep credentials secure</li>
-                <li>Responsible for account activity</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">4. Your Content</h2>
-              <p className="text-muted-foreground leading-relaxed mb-3">
-                You own your images. By using Screensplit, you grant us limited
-                license to process and store your content solely to provide the
-                service. We don't use your content for training AI or marketing.
-              </p>
-              <p className="text-muted-foreground leading-relaxed font-semibold">
-                Prohibited content:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Illegal or infringing content</li>
-                <li>Malware or malicious code</li>
-                <li>Hate speech or harassment</li>
-                <li>Adult content violating policies</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">
-                5. Intellectual Property
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Screensplit owns the service design and code. You own your
-                exported content and may use it commercially. Don't use our
-                trademarks without permission.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">6. Prohibited Conduct</h2>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Illegal activities</li>
-                <li>Unauthorized access attempts</li>
-                <li>Service disruption</li>
-                <li>Automated abuse (bots/scrapers)</li>
-                <li>Reverse engineering</li>
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">7. Disclaimers</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Service provided "AS IS" without warranties. We don't guarantee
-                uninterrupted access, accuracy, or error-free operation. Use at
-                your own risk.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">
-                8. Limitation of Liability
-              </h2>
-              <p className="text-muted-foreground leading-relaxed">
-                We're not liable for indirect, incidental, or consequential
-                damages including lost profits, data loss, or service
-                interruption. Maximum liability limited by law.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">9. Termination</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                We may suspend or terminate accounts for Terms violations. You
-                may delete your account anytime through settings.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">10. Governing Law</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                These Terms are governed by California law. Disputes resolved in
-                San Francisco County courts. Class action waiver applies.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">11. Contact</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                Questions? Contact us at <strong>legal@screensplit.com</strong>{" "}
-                or visit{" "}
-                <Link
-                  href="/contact"
-                  className="text-foreground hover:underline"
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Button size="lg" className="h-12 rounded-full px-8 text-base" asChild>
+                  <a href="mailto:legal@screensplit.com">
+                    <Mail className="mr-2 h-4 w-4" />
+                    legal@screensplit.com
+                  </a>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 rounded-full border-border/60 px-8 text-base"
+                  asChild
                 >
-                  our contact page
-                </Link>
-                .
-              </p>
-            </div>
-          </div>
-        </section>
+                  <Link href="/contact">
+                    Contact page
+                    <FileText className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </article>
+          </section>
+        </div>
+      </main>
 
-      <Footer />
+      <div className="mx-auto w-full max-w-7xl border-x border-border">
+        <Footer />
+      </div>
     </div>
   );
 }

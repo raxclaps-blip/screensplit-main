@@ -1,198 +1,269 @@
-import Link from "next/link"
-import { Mail, MessageSquare, Send, MapPin, Clock } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Navbar } from "@/components/common/Navbar"
-import { Footer } from "@/components/common/Footer"
-import { cacheLife } from "next/cache"
+import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
+import {
+  Clock3,
+  Globe,
+  Mail,
+  MessageSquare,
+  Send,
+  Shield,
+  Sparkles,
+} from "lucide-react";
+import { Header } from "@/components/landing/Header";
+import { Footer } from "@/components/landing/Footer";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { ContactAuthCtas } from "@/components/contact/contact-auth-ctas";
+
+export const metadata: Metadata = {
+  title: "Contact",
+  description:
+    "Contact Screensplit for support, product feedback, or collaboration inquiries.",
+  openGraph: {
+    title: "Contact Screensplit",
+    description:
+      "Reach the Screensplit team for support, feedback, and partnership conversations.",
+  },
+  twitter: {
+    title: "Contact Screensplit",
+    description:
+      "Reach the Screensplit team for support, feedback, and partnership conversations.",
+  },
+};
+
+const supportCards = [
+  {
+    title: "Email Support",
+    body: "For product questions, bug reports, and account issues.",
+    value: "hello@screensplit.com",
+    href: "mailto:hello@screensplit.com",
+    icon: Mail,
+  },
+  {
+    title: "Response Window",
+    body: "Most inquiries receive a response within one business day.",
+    value: "Within 24 hours",
+    icon: Clock3,
+  },
+  {
+    title: "Coverage",
+    body: "Remote-first team supporting creators and teams globally.",
+    value: "Worldwide",
+    icon: Globe,
+  },
+];
+
+const quickAnswers = [
+  {
+    question: "Is Screensplit free to use?",
+    answer:
+      "Yes. Screensplit is free and focused on giving creators a fast way to build clean before/after visuals.",
+  },
+  {
+    question: "Do I need an account to start?",
+    answer:
+      "No. You can begin immediately and create an account later if you want to organize projects.",
+  },
+  {
+    question: "How private are my projects?",
+    answer:
+      "Projects and sharing controls are designed to be private by default with intentional publishing options.",
+  },
+  {
+    question: "Can I request features?",
+    answer:
+      "Yes. Send your workflow details and expected outcome so we can prioritize requests effectively.",
+  },
+  {
+    question: "What formats are supported?",
+    answer:
+      "Screensplit supports standard image formats used by creators, including common web and mobile outputs.",
+  },
+  {
+    question: "How do I report a bug?",
+    answer:
+      "Use the form below with clear reproduction steps and, if possible, screenshots of the issue.",
+  },
+];
 
 export default async function ContactPage() {
-  "use cache"
-  cacheLife("max")
+  "use cache";
+  cacheLife("max");
 
   return (
-    <div className="min-h-screen bg-background font-sans antialiased">
-      <Navbar />
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30">
+      <Header />
 
-      {/* Hero Section */}
-      <section className="border-b border-border">
-      <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
-        <div className="text-center">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5 text-sm text-muted-foreground">
-            <MessageSquare className="h-4 w-4" />
-            <span>We'd love to hear from you</span>
-          </div>
-          <h1 className="mb-6 max-w-4xl mx-auto text-balance text-5xl font-bold leading-tight tracking-tight md:text-7xl">
-            Get in Touch
-          </h1>
-          <p className="mb-10 max-w-2xl mx-auto text-pretty text-lg text-muted-foreground md:text-xl">
-            Have questions, feedback, or just want to say hi? We're here to help.
-          </p>
+      <main className="flex-1 flex flex-col">
+        <div className="mx-auto w-full max-w-7xl divide-y divide-border border-x border-border">
+          <section className="relative overflow-hidden px-4 pb-20 pt-32 sm:px-6 md:pb-28 md:pt-40">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center dark:hidden">
+              <div className="h-[60vh] w-[70vw] rounded-full bg-primary/10 blur-[130px]" />
+            </div>
+
+            <div className="relative z-10 mx-auto max-w-4xl text-center">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/45 px-4 py-1.5 text-sm font-medium text-muted-foreground">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                We would love to hear from you
+              </div>
+
+              <h1 className="mb-6 text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+                Contact the Screensplit team
+              </h1>
+
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
+                Questions, feedback, or partnership ideas. Send a note and we will follow up
+                quickly.
+              </p>
+            </div>
+          </section>
+
+          <section className="px-4 py-14 sm:px-6 md:py-20">
+            <div className="grid gap-6 lg:grid-cols-5">
+              <article className="rounded-[2rem] border border-border/50 bg-card/70 p-8 backdrop-blur-sm lg:col-span-3">
+                <div className="mb-6 flex items-center gap-2">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                    <Send className="h-4 w-4 text-primary" />
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-tight">Send us a message</h2>
+                </div>
+
+                <form className="space-y-6">
+                  <div className="grid gap-6 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor="name" className="mb-2 block text-sm font-medium">
+                        Name
+                      </label>
+                      <Input
+                        id="name"
+                        placeholder="Your name"
+                        className="border-border/60 bg-background/80"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="email" className="mb-2 block text-sm font-medium">
+                        Email
+                      </label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@company.com"
+                        className="border-border/60 bg-background/80"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="subject" className="mb-2 block text-sm font-medium">
+                      Subject
+                    </label>
+                    <Input
+                      id="subject"
+                      placeholder="How can we help?"
+                      className="border-border/60 bg-background/80"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="message" className="mb-2 block text-sm font-medium">
+                      Message
+                    </label>
+                    <Textarea
+                      id="message"
+                      rows={7}
+                      placeholder="Share details, links, and context so we can help effectively."
+                      className="resize-none border-border/60 bg-background/80"
+                    />
+                  </div>
+
+                  <Button className="h-12 w-full rounded-full text-base" size="lg">
+                    Send message
+                    <Send className="ml-2 h-4 w-4" />
+                  </Button>
+                </form>
+              </article>
+
+              <div className="grid gap-6 lg:col-span-2">
+                {supportCards.map((card) => {
+                  const Icon = card.icon;
+
+                  return (
+                    <article
+                      key={card.title}
+                      className="rounded-[2rem] border border-border/50 bg-card/70 p-7 backdrop-blur-sm"
+                    >
+                      <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                        <Icon className="h-4 w-4 text-primary" />
+                      </div>
+
+                      <h3 className="mb-2 text-lg font-semibold tracking-tight">{card.title}</h3>
+                      <p className="mb-3 text-sm text-muted-foreground">{card.body}</p>
+
+                      {card.href ? (
+                        <a
+                          href={card.href}
+                          className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+                        >
+                          {card.value}
+                        </a>
+                      ) : (
+                        <p className="text-sm font-medium text-foreground">{card.value}</p>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          <section className="px-4 py-14 sm:px-6 md:py-20">
+            <div className="mb-12 text-center">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/45 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Quick answers
+              </div>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
+                Frequently asked questions
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Common questions from creators and teams using Screensplit.
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {quickAnswers.map((item) => (
+                <article
+                  key={item.question}
+                  className="rounded-[1.6rem] border border-border/50 bg-card/70 p-6 backdrop-blur-sm"
+                >
+                  <h3 className="mb-3 text-lg font-semibold tracking-tight">{item.question}</h3>
+                  <p className="text-sm leading-relaxed text-muted-foreground">{item.answer}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="px-4 py-16 sm:px-6 md:py-20">
+            <article className="rounded-[2rem] border border-border/50 bg-card/70 px-6 py-12 text-center backdrop-blur-sm sm:px-10">
+              <div className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                <Shield className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
+                Need immediate help?
+              </h2>
+              <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
+                Open the app and continue creating while we handle your request in parallel.
+              </p>
+              <ContactAuthCtas />
+            </article>
+          </section>
         </div>
+      </main>
+
+      <div className="mx-auto w-full max-w-7xl border-x border-border">
+        <Footer />
       </div>
-      </section>
-
-      {/* Contact Section - Bento Grid */}
-      <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Contact Form - Spans 2 columns */}
-          <div className="rounded-2xl border border-border bg-card p-8 md:col-span-2">
-            <h2 className="mb-6 text-2xl font-bold">Send us a message</h2>
-            <form className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div>
-                  <label htmlFor="name" className="mb-2 block text-sm font-medium">
-                    Name
-                  </label>
-                  <Input id="name" placeholder="Your name" className="bg-secondary/50 border-border" />
-                </div>
-                <div>
-                  <label htmlFor="email" className="mb-2 block text-sm font-medium">
-                    Email
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    className="bg-secondary/50 border-border"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="subject" className="mb-2 block text-sm font-medium">
-                  Subject
-                </label>
-                <Input id="subject" placeholder="What's this about?" className="bg-secondary/50 border-border" />
-              </div>
-              <div>
-                <label htmlFor="message" className="mb-2 block text-sm font-medium">
-                  Message
-                </label>
-                <Textarea
-                  id="message"
-                  placeholder="Tell us more..."
-                  rows={6}
-                  className="bg-secondary/50 border-border resize-none"
-                />
-              </div>
-              <Button size="lg" className="w-full gap-2 rounded-full">
-                Send Message
-                <Send className="h-4 w-4" />
-              </Button>
-            </form>
-          </div>
-
-          {/* Contact Info - Spans 1 column */}
-          <div className="space-y-6">
-            {/* Email Card */}
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Mail className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold">Email Us</h3>
-              <p className="text-sm text-muted-foreground mb-3">For general inquiries and support</p>
-              <a href="mailto:hello@screensplit.com" className="text-sm font-medium hover:underline">
-                hello@screensplit.com
-              </a>
-            </div>
-
-            {/* Response Time Card */}
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Clock className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold">Response Time</h3>
-              <p className="text-sm text-muted-foreground">We typically respond within 24 hours during business days</p>
-            </div>
-
-            {/* Location Card */}
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <MapPin className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold">Location</h3>
-              <p className="text-sm text-muted-foreground">Remote-first team serving creators worldwide</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-        <div>
-          <div className="mb-16 text-center">
-            <h2 className="mb-4 text-4xl font-bold tracking-tight md:text-5xl">Frequently Asked Questions</h2>
-            <p className="text-lg text-muted-foreground">Quick answers to common questions</p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-3 text-lg font-semibold">Is Screensplit really free?</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Yes! Screensplit is completely free to use with no hidden costs, subscriptions, or feature limitations.
-                We believe powerful tools should be accessible to everyone.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-3 text-lg font-semibold">Do you store my images?</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                No. All image processing happens locally in your browser. Your images never leave your device, ensuring
-                complete privacy and security for your work.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-3 text-lg font-semibold">What image formats are supported?</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Screensplit supports all common image formats including JPG, PNG, WebP, and more. You can export your
-                final comparison as either PNG or JPEG.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-3 text-lg font-semibold">Can I use Screensplit for commercial projects?</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                You're free to use Screensplit for personal or commercial projects. The images you create are yours to
-                use however you'd like.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-3 text-lg font-semibold">Do I need to create an account?</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Nope! Screensplit works instantly without any signup or account creation. Just visit the app and start
-                creating.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <h3 className="mb-3 text-lg font-semibold">How can I report a bug or request a feature?</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                We'd love to hear from you! Use the contact form above to report bugs or suggest features. Your feedback
-                helps us make Screensplit better for everyone.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-        <div className="rounded-2xl border border-border bg-card p-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">Still have questions?</h2>
-          <p className="mb-8 text-muted-foreground">
-            Can't find what you're looking for? Send us a message and we'll get back to you soon.
-          </p>
-          <Button size="lg" className="gap-2 rounded-full text-base">
-            Contact Support
-            <MessageSquare className="h-4 w-4" />
-          </Button>
-        </div>
-      </section>
-
-      <Footer />
     </div>
-  )
+  );
 }

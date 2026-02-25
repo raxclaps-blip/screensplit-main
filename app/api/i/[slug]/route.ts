@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { getFromR2 } from "@/lib/r2"
 import { cookies } from "next/headers"
 import { auth } from "@/lib/auth"
+import { toImageKitUrl } from "@/lib/imagekit"
 
 function resolveObjectKey(finalImageUrl: string): string {
   if (!finalImageUrl.startsWith("http")) {
@@ -31,6 +32,13 @@ function inferContentTypeFromKey(key: string): string {
   if (extension === "avif") return "image/avif"
   if (extension === "bmp") return "image/bmp"
   return "image/png"
+}
+
+function parsePositiveInt(value: string | null): number | undefined {
+  if (!value) return undefined
+  const parsed = Number.parseInt(value, 10)
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined
+  return parsed
 }
 
 function matchesEtag(ifNoneMatch: string | null, etag: string | undefined): boolean {
@@ -116,6 +124,19 @@ export async function GET(
         { error: "Image data not available" },
         { status: 404 }
       )
+    }
+
+    if (!project.isPrivate) {
+      const width = parsePositiveInt(req.nextUrl.searchParams.get("w"))
+      const quality = parsePositiveInt(req.nextUrl.searchParams.get("q"))
+      const imageKitUrl = toImageKitUrl(storageUrl, { width, quality })
+
+      if (
+        imageKitUrl !== storageUrl &&
+        imageKitUrl.startsWith("https://")
+      ) {
+        return NextResponse.redirect(imageKitUrl, { status: 307 })
+      }
     }
 
     const key = resolveObjectKey(storageUrl)

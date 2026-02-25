@@ -12,22 +12,50 @@ export default function Icon() {
     (
       <div
         style={{
-          fontSize: 24,
-          background: 'linear-gradient(135deg, #ffffff 0%, #9CA3AF 100%)',
           width: '100%',
           height: '100%',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 6,
+          position: 'relative',
+          overflow: 'hidden',
+          background: '#ffffff',
+          borderRadius: '21.05%',
         }}
       >
         <div
           style={{
-            width: 2,
-            height: 16,
-            background: '#000000',
-            borderRadius: 1,
+            position: 'absolute',
+            left: '12.28%',
+            top: '17.46%',
+            width: '17.19%',
+            height: '78.25%',
+            borderRadius: '8.59%',
+            transform: 'rotate(-22.5deg)',
+            transformOrigin: 'top left',
+            background: '#5EA500',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '42.46%',
+            top: '17.46%',
+            width: '17.19%',
+            height: '78.25%',
+            borderRadius: '8.59%',
+            transform: 'rotate(-22.5deg)',
+            transformOrigin: 'top left',
+            background: '#5EA500',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            left: '12.28%',
+            top: '68.07%',
+            width: '17.89%',
+            height: '17.89%',
+            borderRadius: '50%',
+            background: '#09090B',
           }}
         />
       </div>

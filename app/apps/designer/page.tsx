@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Download, ImageUp, Loader2, Type } from "lucide-react"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth-client"
+import { toImageKitUrl } from "@/lib/imagekit"
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = text.trim().split(/\s+/)
@@ -1284,7 +1285,7 @@ export default function DesignerPage() {
             </div>
             {logoUrl ? (
               <div className="mt-2 rounded-lg border border-border/60 bg-background/70 p-2">
-                <img src={logoUrl} alt="Saved logo preview" className="h-12 w-auto max-w-full object-contain" />
+                <img src={toImageKitUrl(logoUrl)} alt="Saved logo preview" className="h-12 w-auto max-w-full object-contain" />
               </div>
             ) : (
               <p className="mt-2 text-xs text-muted-foreground">No saved logo yet.</p>

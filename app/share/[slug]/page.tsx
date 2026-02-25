@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { SharePageClient, type ShareProjectData } from "@/components/share/share-page-client"
+import { toImageKitUrl } from "@/lib/imagekit"
 
 interface SharePageProps {
   params: Promise<{ slug: string }>
@@ -15,6 +16,7 @@ async function getShareProject(slug: string): Promise<ShareProjectData | null> {
         where: { shareSlug: slug },
         select: {
           shareSlug: true,
+          finalImageUrl: true,
           isPrivate: true,
           shareMessage: true,
           createdAt: true,
@@ -64,6 +66,9 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
   const description =
     project.shareMessage?.trim() ||
     `View this before-and-after comparison${creator} on Screensplit.`
+  const previewImageUrl = project.isPrivate
+    ? `/api/i/${slug}`
+    : toImageKitUrl(project.finalImageUrl || `/api/i/${slug}`)
 
   return {
     title: `${project.beforeLabel} vs ${project.afterLabel}${creator} | Screensplit`,
@@ -76,13 +81,13 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       title: `${project.beforeLabel} vs ${project.afterLabel} | Screensplit`,
       description,
       type: "article",
-      images: [{ url: `/api/i/${slug}`, alt: "Shared before and after comparison" }],
+      images: [{ url: previewImageUrl, alt: "Shared before and after comparison" }],
     },
     twitter: {
       card: "summary_large_image",
       title: `${project.beforeLabel} vs ${project.afterLabel} | Screensplit`,
       description,
-      images: [`/api/i/${slug}`],
+      images: [previewImageUrl],
     },
   }
 }

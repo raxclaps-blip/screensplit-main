@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/icon', sizes: '32x32' },
-      { url: '/logo.svg', type: 'image/svg+xml' },
+      { url: '/logo-dark-mode.svg', type: 'image/svg+xml' },
     ],
     shortcut: ['/icon'],
     apple: ['/apple-icon'],

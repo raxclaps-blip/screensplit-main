@@ -1,20 +1,33 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Shield, Eye, Lock, Server, FileCheck, Mail } from "lucide-react";
-import { Navbar } from "@/components/common/Navbar";
-import { Footer } from "@/components/common/Footer";
 import { cacheLife } from "next/cache";
+import {
+  Database,
+  Eye,
+  Globe2,
+  Lock,
+  Mail,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { Header } from "@/components/landing/Header";
+import { Footer } from "@/components/landing/Footer";
+import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Read how Screensplit protects your privacy. We process images locally in your browser and never upload your content to our servers.",
+  description:
+    "Read how Screensplit handles your data, privacy rights, and security practices.",
   openGraph: {
     title: "Privacy Policy - Screensplit",
-    description: "Learn how Screensplit protects your privacy with local processing and no data uploads.",
+    description:
+      "Understand what data Screensplit collects, how it is used, and your privacy choices.",
   },
   twitter: {
     title: "Privacy Policy - Screensplit",
-    description: "Learn how Screensplit protects your privacy with local processing and no data uploads.",
+    description:
+      "Understand what data Screensplit collects, how it is used, and your privacy choices.",
   },
   robots: {
     index: true,
@@ -22,528 +35,252 @@ export const metadata: Metadata = {
   },
 };
 
+const principles = [
+  {
+    title: "Privacy by default",
+    description:
+      "Core editing workflows are designed to minimize data exposure and keep control with you.",
+    icon: Lock,
+  },
+  {
+    title: "Minimal collection",
+    description:
+      "We collect only the data needed to operate, secure, and improve Screensplit.",
+    icon: Database,
+  },
+  {
+    title: "No data sales",
+    description:
+      "We do not sell personal data or share your content with advertising brokers.",
+    icon: Eye,
+  },
+];
+
+const policySections = [
+  {
+    id: "data-we-collect",
+    title: "1. Data we collect",
+    content: [
+      "If you create an account, we collect account details such as your email and authentication metadata needed to operate sign-in and account recovery.",
+      "If you choose to save projects, associated files and project metadata are stored in managed infrastructure so you can access your work later.",
+      "We may process operational telemetry (for example, performance diagnostics and error logs) to maintain reliability and security.",
+    ],
+    bullets: [
+      "Account email and authentication records",
+      "Project files and metadata when explicitly saved",
+      "Security and reliability logs",
+    ],
+  },
+  {
+    id: "how-we-use-data",
+    title: "2. How we use data",
+    content: [
+      "We use data strictly to provide product functionality, secure the service, respond to support requests, and improve product quality.",
+      "We do not use private customer content to train advertising systems.",
+    ],
+    bullets: [
+      "Deliver core product functionality",
+      "Prevent abuse and secure accounts",
+      "Diagnose incidents and improve performance",
+      "Respond to support and legal obligations",
+    ],
+  },
+  {
+    id: "sharing-and-processors",
+    title: "3. Sharing and subprocessors",
+    content: [
+      "We rely on trusted infrastructure and service providers to host the application, store data when required, and operate authentication and analytics.",
+      "Vendors are selected with security and contractual safeguards, and are expected to process data only for service delivery.",
+    ],
+    bullets: [
+      "Hosting and application delivery providers",
+      "Cloud storage and database providers",
+      "Security and operations tools",
+    ],
+  },
+  {
+    id: "retention-security",
+    title: "4. Retention and security",
+    content: [
+      "We retain data for as long as needed to provide the service, meet legal requirements, and resolve disputes.",
+      "We use security controls such as encrypted transport, access restrictions, and infrastructure-level protections to reduce risk.",
+    ],
+    bullets: [
+      "Encryption in transit",
+      "Access controls and least-privilege principles",
+      "Periodic review of logs and security posture",
+    ],
+  },
+  {
+    id: "your-rights",
+    title: "5. Your rights and choices",
+    content: [
+      "Subject to applicable law, you may request access, correction, export, or deletion of your personal data.",
+      "You can also manage some information directly in product settings when available.",
+    ],
+    bullets: [
+      "Access and correction requests",
+      "Deletion and export requests",
+      "Account controls and preference settings",
+    ],
+  },
+  {
+    id: "children-and-international",
+    title: "6. Children and international transfers",
+    content: [
+      "Screensplit is not directed to children under 13, and we do not knowingly collect personal data from children under 13.",
+      "If you access the service from outside the United States, your information may be processed in countries where our providers operate, subject to appropriate safeguards.",
+    ],
+  },
+  {
+    id: "changes",
+    title: "7. Policy updates",
+    content: [
+      "We may update this Privacy Policy to reflect product, legal, or operational changes.",
+      "When material updates are made, we will update the effective date and post the updated version on this page.",
+    ],
+  },
+];
+
 export default async function PrivacyPage() {
-  "use cache"
-  cacheLife("max")
+  "use cache";
+  cacheLife("max");
 
   return (
-    <div className="min-h-screen bg-background font-sans antialiased">
-      <Navbar />
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-primary/30">
+      <Header />
 
-        {/* Hero Section */}
-        <section className="border-b border-border">
-          <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
-            <div className="text-center">
-              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-1.5 text-sm text-muted-foreground">
-                <Shield className="h-4 w-4" />
-                <span>Effective Date: January 1, 2025</span>
+      <main className="flex-1 flex flex-col">
+        <div className="mx-auto w-full max-w-7xl divide-y divide-border border-x border-border">
+          <section className="relative overflow-hidden px-4 pb-20 pt-32 sm:px-6 md:pb-28 md:pt-40">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center dark:hidden">
+              <div className="h-[60vh] w-[70vw] rounded-full bg-primary/10 blur-[130px]" />
+            </div>
+
+            <div className="relative z-10 mx-auto max-w-4xl text-center">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/45 px-4 py-1.5 text-sm font-medium text-muted-foreground">
+                <Shield className="h-4 w-4 text-primary" />
+                Effective date: January 1, 2025
               </div>
-              <h1 className="mb-6 max-w-4xl mx-auto text-balance text-5xl font-bold leading-tight tracking-tight md:text-7xl">
+              <h1 className="mb-6 text-balance text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 Privacy Policy
               </h1>
-              <p className="mb-10 max-w-2xl mx-auto text-pretty text-lg text-muted-foreground md:text-xl">
-                Your privacy is our priority. Learn how we protect your data and
-                respect your rights.
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground md:text-xl">
+                This policy explains what data Screensplit processes, why it is used, and the
+                choices you have.
               </p>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Key Principles */}
-        <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-          <div className="mb-12 text-center">
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Our Privacy Principles
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              How we handle your information
-            </p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Lock className="h-6 w-6" />
+          <section className="px-4 py-14 sm:px-6 md:py-20">
+            <div className="mb-10 text-center">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/45 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Core principles
               </div>
-              <h3 className="mb-2 text-xl font-semibold">
-                Client-Side Processing
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                All image processing happens in your browser. Your files never
-                leave your device.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Eye className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">No Tracking</h3>
-              <p className="text-sm text-muted-foreground">
-                We don't use invasive analytics or track your behavior across
-                the web.
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card p-6">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Server className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold">Minimal Data</h3>
-              <p className="text-sm text-muted-foreground">
-                We only collect what's necessary to provide and improve our
-                service.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Main Content */}
-        <section className="mx-auto max-w-7xl px-6 py-12 border-l border-r border-border">
-          <div className="space-y-12">
-            {/* Introduction */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-4 text-2xl font-bold">Introduction</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  Welcome to Screensplit. We respect your privacy and are
-                  committed to protecting your personal data. This privacy
-                  policy explains how we handle your information when you use
-                  our service.
-                </p>
-                <p>
-                  Screensplit is designed with privacy as a core principle.
-                  Unlike many online tools, we process your images entirely in
-                  your browser, meaning your files never need to be uploaded to
-                  our servers.
-                </p>
-              </div>
+              <h2 className="text-3xl font-bold tracking-tight md:text-5xl">How we approach privacy</h2>
             </div>
 
-            {/* Information We Collect */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <FileCheck className="h-6 w-6" />
-              </div>
-              <h2 className="mb-6 text-2xl font-bold">
-                Information We Collect
-              </h2>
+            <div className="grid gap-6 md:grid-cols-3">
+              {principles.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <article
+                    key={item.title}
+                    className="rounded-[2rem] border border-border/50 bg-card/70 p-7 backdrop-blur-sm"
+                  >
+                    <div className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                      <Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <h3 className="mb-2 text-lg font-semibold tracking-tight">{item.title}</h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="px-4 py-14 sm:px-6 md:py-20">
+            <div className="grid gap-6 lg:grid-cols-[0.34fr_0.66fr]">
+              <aside className="rounded-[2rem] border border-border/50 bg-card/70 p-6 backdrop-blur-sm lg:sticky lg:top-24 lg:h-fit">
+                <h2 className="mb-4 text-xl font-semibold tracking-tight">On this page</h2>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  {policySections.map((section) => (
+                    <li key={section.id}>
+                      <a href={`#${section.id}`} className="hover:text-foreground transition-colors">
+                        {section.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </aside>
+
               <div className="space-y-6">
-                <div>
-                  <h3 className="mb-2 text-lg font-semibold">
-                    1. Images and Files
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed mb-2">
-                    When you use Screensplit's core functionality without an
-                    account:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                    <li>
-                      Your images are processed entirely in your browser using
-                      JavaScript
-                    </li>
-                    <li>Files are not uploaded to our servers</li>
-                    <li>Images are not stored, cached, or transmitted to us</li>
-                    <li>
-                      When you close the browser tab, all data is immediately
-                      discarded
-                    </li>
-                  </ul>
-                  <p className="text-muted-foreground leading-relaxed mt-2">
-                    If you create an account and choose to save images to your
-                    gallery:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                    <li>
-                      Images are uploaded to secure cloud storage
-                    </li>
-                    <li>Images are encrypted in transit and at rest</li>
-                    <li>
-                      You control which images to save and can delete them at
-                      any time
-                    </li>
-                    <li>
-                      Saved images are only accessible to you through your
-                      authenticated account
-                    </li>
-                  </ul>
-                </div>
+                {policySections.map((section) => (
+                  <article
+                    key={section.id}
+                    id={section.id}
+                    className="rounded-[2rem] border border-border/50 bg-card/70 p-8 backdrop-blur-sm scroll-mt-28"
+                  >
+                    <h3 className="mb-4 text-2xl font-bold tracking-tight">{section.title}</h3>
+                    <div className="space-y-4 text-sm leading-relaxed text-muted-foreground">
+                      {section.content.map((paragraph) => (
+                        <p key={paragraph}>{paragraph}</p>
+                      ))}
+                    </div>
 
-                <div>
-                  <h3 className="mb-2 text-lg font-semibold">
-                    2. Account Information
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    If you create an account, we collect:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                    <li>
-                      Email address (for authentication and account recovery)
-                    </li>
-                    <li>Display name (optional, for personalization)</li>
-                    <li>
-                      Password (encrypted using industry-standard bcrypt
-                      hashing)
-                    </li>
-                    <li>Account creation and last login timestamps</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="mb-2 text-lg font-semibold">3. Usage Data</h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    We collect minimal, anonymized usage data to improve our
-                    service:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                    <li>Page views and feature usage (anonymized)</li>
-                    <li>Error reports and performance metrics</li>
-                    <li>
-                      Browser type and device information (for compatibility)
-                    </li>
-                    <li>
-                      Approximate geographic location (country-level only)
-                    </li>
-                  </ul>
-                  <p className="text-muted-foreground leading-relaxed mt-2">
-                    We do <strong>not</strong> use third-party tracking cookies
-                    or invasive analytics tools.
-                  </p>
-                </div>
-
-                <div>
-                  <h3 className="mb-2 text-lg font-semibold">
-                    4. Cookies and Local Storage
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    We use cookies and browser storage only for essential
-                    functionality:
-                  </p>
-                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                    <li>Authentication cookies (to keep you logged in)</li>
-                    <li>
-                      Preference cookies (to remember your settings like theme)
-                    </li>
-                    <li>Session storage (temporary data while you work)</li>
-                  </ul>
-                  <p className="text-muted-foreground leading-relaxed mt-2">
-                    You can control cookie settings through your browser
-                    preferences.
-                  </p>
-                </div>
+                    {section.bullets ? (
+                      <ul className="mt-5 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
+                        {section.bullets.map((bullet) => (
+                          <li key={bullet}>{bullet}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </article>
+                ))}
               </div>
             </div>
+          </section>
 
-            {/* How We Use Your Information */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">
-                How We Use Your Information
+          <section className="px-4 py-16 sm:px-6 md:py-20">
+            <article className="rounded-[2rem] border border-border/50 bg-card/70 px-6 py-12 text-center backdrop-blur-sm sm:px-10">
+              <div className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl border border-border/50 bg-muted/45">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-5xl">
+                Questions about privacy?
               </h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  We use the information we collect for the following purposes:
-                </p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>
-                    <strong>Service Delivery:</strong> To provide and maintain
-                    Screensplit's functionality
-                  </li>
-                  <li>
-                    <strong>Account Management:</strong> To create and manage
-                    your account if you choose to register
-                  </li>
-                  <li>
-                    <strong>Communication:</strong> To send important service
-                    updates or respond to your inquiries
-                  </li>
-                  <li>
-                    <strong>Improvement:</strong> To understand how people use
-                    Screensplit and improve the experience
-                  </li>
-                  <li>
-                    <strong>Security:</strong> To detect and prevent fraud,
-                    abuse, and security incidents
-                  </li>
-                  <li>
-                    <strong>Legal Compliance:</strong> To comply with applicable
-                    laws and regulations
-                  </li>
-                </ul>
-                <p className="mt-4">
-                  We will <strong>never</strong>:
-                </p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>Sell your personal data to third parties</li>
-                  <li>Use your images for training AI models</li>
-                  <li>Share your information with advertisers</li>
-                  <li>Access your images without explicit permission</li>
-                </ul>
-              </div>
-            </div>
+              <p className="mx-auto mb-8 max-w-2xl text-lg text-muted-foreground">
+                Reach out to our team for data requests, clarifications, or privacy-related support.
+              </p>
 
-            {/* Data Sharing and Third Parties */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">
-                Data Sharing and Third Parties
-              </h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  We work with a limited number of trusted third-party service
-                  providers to deliver Screensplit:
-                </p>
-                <div className="space-y-4 mt-4">
-                  <div className="rounded-lg border border-border bg-secondary/30 p-4">
-                    <h4 className="font-semibold mb-2">Vercel (Hosting)</h4>
-                    <p className="text-sm">
-                      Hosts our web application. May collect standard web server
-                      logs (IP addresses, request URLs, timestamps).
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-secondary/30 p-4">
-                    <h4 className="font-semibold mb-2">Cloud Storage</h4>
-                    <p className="text-sm">
-                      Stores your saved images if you create an account. Images
-                      are encrypted and only accessible to you.
-                    </p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-secondary/30 p-4">
-                    <h4 className="font-semibold mb-2">
-                      PlanetScale (Database)
-                    </h4>
-                    <p className="text-sm">
-                      Stores account information and metadata. Data is encrypted
-                      in transit and at rest.
-                    </p>
-                  </div>
-                </div>
-                <p className="mt-4">
-                  These providers are contractually bound to protect your data
-                  and use it only for providing their services to us. We do not
-                  share data with advertising networks, data brokers, or social
-                  media platforms.
-                </p>
+              <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <Button size="lg" className="h-12 rounded-full px-8 text-base" asChild>
+                  <a href="mailto:privacy@screensplit.com">
+                    <Mail className="mr-2 h-4 w-4" />
+                    privacy@screensplit.com
+                  </a>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 rounded-full border-border/60 px-8 text-base"
+                  asChild
+                >
+                  <Link href="/contact">
+                    Contact page
+                    <Globe2 className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
               </div>
-            </div>
+            </article>
+          </section>
+        </div>
+      </main>
 
-            {/* Data Security */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">Data Security</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  We implement industry-standard security measures to protect
-                  your data:
-                </p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>
-                    <strong>Encryption:</strong> All data is encrypted in
-                    transit (TLS/SSL) and at rest
-                  </li>
-                  <li>
-                    <strong>Password Security:</strong> Passwords are hashed
-                    using bcrypt with salt
-                  </li>
-                  <li>
-                    <strong>Access Controls:</strong> Strict access controls
-                    limit who can access data
-                  </li>
-                  <li>
-                    <strong>Regular Audits:</strong> We regularly review our
-                    security practices
-                  </li>
-                  <li>
-                    <strong>Secure Infrastructure:</strong> We use
-                    enterprise-grade cloud providers
-                  </li>
-                </ul>
-                <p className="mt-4">
-                  While we implement strong security measures, no system is 100%
-                  secure. We encourage you to use strong, unique passwords and
-                  enable two-factor authentication when available.
-                </p>
-              </div>
-            </div>
-
-            {/* Your Rights and Choices */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">
-                Your Rights and Choices
-              </h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  You have the following rights regarding your personal data:
-                </p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>
-                    <strong>Access:</strong> Request a copy of the personal data
-                    we hold about you
-                  </li>
-                  <li>
-                    <strong>Correction:</strong> Update or correct inaccurate
-                    information
-                  </li>
-                  <li>
-                    <strong>Deletion:</strong> Request deletion of your account
-                    and associated data
-                  </li>
-                  <li>
-                    <strong>Export:</strong> Download your data in a portable
-                    format
-                  </li>
-                  <li>
-                    <strong>Opt-out:</strong> Unsubscribe from marketing
-                    communications
-                  </li>
-                  <li>
-                    <strong>Object:</strong> Object to certain types of data
-                    processing
-                  </li>
-                </ul>
-                <p className="mt-4">
-                  To exercise any of these rights, please contact us at{" "}
-                  <strong>privacy@screensplit.com</strong>. We will respond to
-                  your request within 30 days.
-                </p>
-                <p className="mt-4">You can also:</p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>
-                    Delete your account at any time through account settings
-                  </li>
-                  <li>Clear browser cookies and local storage</li>
-                  <li>
-                    Use Screensplit without creating an account (no data
-                    collected)
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Data Retention */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">Data Retention</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>We retain your data only as long as necessary:</p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>
-                    <strong>Account Data:</strong> Retained while your account
-                    is active
-                  </li>
-                  <li>
-                    <strong>Saved Images:</strong> Retained until you delete
-                    them or close your account
-                  </li>
-                  <li>
-                    <strong>Usage Data:</strong> Anonymized and retained for up
-                    to 2 years for analytics
-                  </li>
-                  <li>
-                    <strong>Deleted Accounts:</strong> Permanently deleted
-                    within 30 days of deletion request
-                  </li>
-                </ul>
-                <p className="mt-4">
-                  Remember: If you use Screensplit without an account, no data
-                  is retained on our servers.
-                </p>
-              </div>
-            </div>
-
-            {/* Children's Privacy */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">Children's Privacy</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  Screensplit is not intended for children under 13 years of
-                  age. We do not knowingly collect personal information from
-                  children under 13. If you are a parent or guardian and believe
-                  your child has provided us with personal information, please
-                  contact us, and we will delete it promptly.
-                </p>
-              </div>
-            </div>
-
-            {/* International Users */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">International Users</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  Screensplit is operated from the United States. If you access
-                  our service from outside the US, your information may be
-                  transferred to, stored, and processed in the US or other
-                  countries where our service providers operate.
-                </p>
-                <p>
-                  By using Screensplit, you consent to this transfer. We ensure
-                  that any international data transfers comply with applicable
-                  data protection laws, including GDPR for European users.
-                </p>
-              </div>
-            </div>
-
-            {/* Changes to This Policy */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <h2 className="mb-6 text-2xl font-bold">
-                Changes to This Policy
-              </h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  We may update this privacy policy from time to time to reflect
-                  changes in our practices or legal requirements. When we make
-                  significant changes, we will:
-                </p>
-                <ul className="list-disc list-inside space-y-2 ml-4">
-                  <li>Update the "Effective Date" at the top of this policy</li>
-                  <li>Notify you via email if you have an account</li>
-                  <li>Display a notice on our website</li>
-                </ul>
-                <p className="mt-4">
-                  We encourage you to review this policy periodically. Your
-                  continued use of Screensplit after changes constitutes
-                  acceptance of the updated policy.
-                </p>
-              </div>
-            </div>
-
-            {/* Contact Us */}
-            <div className="rounded-2xl border border-border bg-card p-8">
-              <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/5">
-                <Mail className="h-6 w-6" />
-              </div>
-              <h2 className="mb-6 text-2xl font-bold">Contact Us</h2>
-              <div className="space-y-4 text-muted-foreground leading-relaxed">
-                <p>
-                  If you have questions, concerns, or requests regarding this
-                  privacy policy or how we handle your data, please contact us:
-                </p>
-                <div className="rounded-lg border border-border bg-secondary/30 p-4 mt-4">
-                  <p className="font-medium text-foreground mb-2">
-                    Screensplit Privacy Team
-                  </p>
-                  <p>
-                    Email:{" "}
-                    <a
-                      href="mailto:privacy@screensplit.com"
-                      className="text-foreground hover:underline"
-                    >
-                      privacy@screensplit.com
-                    </a>
-                  </p>
-                  <p>
-                    Contact Form:{" "}
-                    <Link
-                      href="/contact"
-                      className="text-foreground hover:underline"
-                    >
-                      screensplit.com/contact
-                    </Link>
-                  </p>
-                </div>
-                <p className="mt-4">
-                  We take privacy seriously and will respond to all inquiries
-                  within 30 days.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-      <Footer />
+      <div className="mx-auto w-full max-w-7xl border-x border-border">
+        <Footer />
+      </div>
     </div>
   );
 }

@@ -7,7 +7,8 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    unoptimized: true,
+    loader: 'custom',
+    loaderFile: './lib/imagekit-loader.ts',
     formats: ['image/webp', 'image/avif'],
   },
   compress: true,

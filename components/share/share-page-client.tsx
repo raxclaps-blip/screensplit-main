@@ -8,9 +8,11 @@ import { Lock, Eye, Loader2, MessageSquare } from "lucide-react"
 import { Navbar } from "@/components/common/Navbar"
 import { Footer } from "@/components/common/Footer"
 import { ProgressiveImage } from "@/components/ui/progressive-image"
+import { toImageKitUrl } from "@/lib/imagekit"
 
 export interface ShareProjectData {
   shareSlug: string
+  finalImageUrl?: string | null
   isPrivate: boolean
   shareMessage: string | null
   createdAt: string
@@ -132,7 +134,9 @@ export function SharePageClient({ slug, project, initialAuthorized }: SharePageC
     )
   }
 
-  const imageUrl = `/api/i/${slug}`
+  const imageUrl = project.isPrivate
+    ? `/api/i/${slug}`
+    : toImageKitUrl(project.finalImageUrl || `/api/i/${slug}`)
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

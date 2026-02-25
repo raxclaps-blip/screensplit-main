@@ -18,6 +18,7 @@ import { ShareDialog } from "@/components/screensplit/share-dialog"
 import { GalleryCard } from "@/components/gallery/gallery-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { toImageKitUrl } from "@/lib/imagekit"
 import {
   Dialog,
   DialogContent,
@@ -244,8 +245,14 @@ export default function GalleryPage() {
   const sharedImages = useMemo(() => projects.filter((p) => p.isPublic && p.shareSlug && p.finalImageUrl), [projects])
 
   const previewImageUrl = useMemo(() => {
-    if (!previewProject?.shareSlug || !previewProject.finalImageUrl) return ""
+    if (!previewProject?.finalImageUrl) return ""
     const version = new Date(previewProject.updatedAt).getTime()
+    if (!previewProject.isPrivate) {
+      const optimizedUrl = toImageKitUrl(previewProject.finalImageUrl)
+      const joinChar = optimizedUrl.includes("?") ? "&" : "?"
+      return `${optimizedUrl}${joinChar}v=${version}`
+    }
+    if (!previewProject.shareSlug) return ""
     return `/api/i/${previewProject.shareSlug}?v=${version}`
   }, [previewProject])
 
@@ -445,7 +452,6 @@ export default function GalleryPage() {
                 )}
                 onLoad={() => setPreviewLoaded(true)}
                 priority
-                unoptimized
               />
             </div>
 
@@ -517,7 +523,11 @@ export default function GalleryPage() {
         <ShareDialog
           open={shareDialogOpen}
           onOpenChange={handleCloseShareDialog}
-          imagePreviewSrc={`/api/i/${selectedProject.shareSlug}`}
+          imagePreviewSrc={
+            selectedProject.isPrivate
+              ? `/api/i/${selectedProject.shareSlug}`
+              : toImageKitUrl(selectedProject.finalImageUrl || `/api/i/${selectedProject.shareSlug}`)
+          }
           slug={selectedProject.shareSlug!}
           initialIsPrivate={selectedProject.isPrivate}
           initialMessage={selectedProject.shareMessage || ""}

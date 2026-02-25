@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { cn } from "@/lib/utils"
 import Image from "next/image"
+import { toImageKitUrl } from "@/lib/imagekit"
 
 interface ProgressiveImageProps {
   src: string
@@ -29,9 +30,10 @@ export function ProgressiveImage({
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
   const [hasError, setHasError] = useState(false)
+  const optimizedSrc = useMemo(() => toImageKitUrl(src), [src])
 
   useEffect(() => {
-    if (!src) return
+    if (!optimizedSrc) return
 
     setIsLoading(true)
     setHasError(false)
@@ -52,7 +54,7 @@ export function ProgressiveImage({
       const width = Math.max(img.naturalWidth || 0, 1)
       const height = Math.max(img.naturalHeight || 0, 1)
       setDimensions({ width, height })
-      setImageSrc(src)
+      setImageSrc(optimizedSrc)
       setIsLoading(false)
       onLoad?.()
     }
@@ -62,13 +64,13 @@ export function ProgressiveImage({
       setIsLoading(false)
     }
 
-    img.src = src
+    img.src = optimizedSrc
 
     return () => {
       img.onload = null
       img.onerror = null
     }
-  }, [src, priority, onLoad])
+  }, [optimizedSrc, priority, onLoad])
 
   if (hasError) {
     return (
@@ -119,10 +121,7 @@ export function ProgressiveImage({
       {/* Loading spinner overlay */}
       {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            <p className="text-xs text-muted-foreground">Loading image...</p>
-          </div>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         </div>
       )}
     </div>
