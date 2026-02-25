@@ -1,54 +1,74 @@
 "use client"
 
-import { useEffect, useState, Suspense } from "react"
+import { Suspense, useEffect, useRef } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Icons } from "@/components/ui/icons"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import useSWR from "swr"
+
+type VerifyEmailResponse = {
+  error?: string
+}
+
+const verifyEmailFetcher = async ([url, token]: readonly [string, string]) => {
+  const response = await fetch(`${url}?token=${encodeURIComponent(token)}`)
+  const data = (await response.json().catch(() => ({}))) as VerifyEmailResponse
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to verify email")
+  }
+}
 
 function VerifyEmailForm() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
-  const [message, setMessage] = useState("")
+  const token = searchParams.get("token")
+  const handledStatusRef = useRef<"success" | "error" | null>(null)
+  const { error, isLoading } = useSWR(
+    token ? ["/api/auth/verify-email", token] : null,
+    verifyEmailFetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: false,
+    },
+  )
+
+  const status: "loading" | "success" | "error" = !token
+    ? "error"
+    : isLoading
+      ? "loading"
+      : error
+        ? "error"
+        : "success"
+  const message = !token
+    ? "Invalid verification link"
+    : error
+      ? error.message || "Failed to verify email"
+      : "Your email has been verified successfully!"
 
   useEffect(() => {
-    const token = searchParams.get("token")
+    if (status === "success" && handledStatusRef.current !== "success") {
+      handledStatusRef.current = "success"
+      toast.success("Email verified successfully")
+      const timeoutId = window.setTimeout(() => {
+        router.push("/auth/signin")
+      }, 3000)
 
-    if (!token) {
-      setStatus("error")
-      setMessage("Invalid verification link")
-      return
+      return () => window.clearTimeout(timeoutId)
     }
 
-    // Verify email
-    fetch(`/api/auth/verify-email?token=${token}`)
-      .then(async (res) => {
-        const data = await res.json()
-        if (res.ok) {
-          setStatus("success")
-          setMessage("Your email has been verified successfully!")
-          toast.success("Email verified successfully")
-          // Redirect to sign in after 3 seconds
-          setTimeout(() => {
-            router.push("/auth/signin")
-          }, 3000)
-        } else {
-          setStatus("error")
-          setMessage(data.error || "Failed to verify email")
-          toast.error(data.error || "Failed to verify email")
-        }
-      })
-      .catch(() => {
-        setStatus("error")
-        setMessage("An error occurred while verifying your email")
-        toast.error("An error occurred while verifying your email")
-      })
-  }, [searchParams, router])
+    if (status === "error" && token && handledStatusRef.current !== "error") {
+      handledStatusRef.current = "error"
+      toast.error(message)
+    }
+
+    return undefined
+  }, [message, router, status, token])
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">

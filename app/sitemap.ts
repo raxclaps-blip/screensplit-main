@@ -1,69 +1,66 @@
-import { MetadataRoute } from 'next'
- 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://screensplit.vercel.app'
-  const lastModified = new Date('2026-02-21T00:00:00.000Z')
-  
-  return [
-    {
-      url: baseUrl,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 1,
-    },
-    {
-      url: `${baseUrl}/about`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/apps/screensplit`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/apps/converter`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/apps/optimizer`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/apps/image-tools`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/apps/gallery`,
-      lastModified,
-      changeFrequency: 'daily',
-      priority: 0.7,
-    },
-    {
-      url: `${baseUrl}/community`,
-      lastModified,
-      changeFrequency: 'daily',
-      priority: 0.75,
-    },
-    {
-      url: `${baseUrl}/privacy`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/terms`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.5,
-    },
-  ]
+import { MetadataRoute } from "next"
+import { prisma } from "@/lib/prisma"
+import { absoluteUrl } from "@/lib/seo/site"
+
+export const revalidate = 3600
+
+type SitemapEntry = MetadataRoute.Sitemap[number]
+
+const staticRouteEntries: Array<{
+  path: string
+  changeFrequency: SitemapEntry["changeFrequency"]
+  priority: number
+}> = [
+  { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/about", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/contact", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/community", changeFrequency: "daily", priority: 0.85 },
+  { path: "/privacy", changeFrequency: "yearly", priority: 0.5 },
+  { path: "/terms", changeFrequency: "yearly", priority: 0.5 },
+]
+
+function getStaticEntries(lastModified: Date): MetadataRoute.Sitemap {
+  return staticRouteEntries.map((entry) => ({
+    url: absoluteUrl(entry.path),
+    lastModified,
+    changeFrequency: entry.changeFrequency,
+    priority: entry.priority,
+  }))
 }
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const generatedAt = new Date()
+  const staticEntries = getStaticEntries(generatedAt)
+
+  try {
+    const publicShares = await prisma.project.findMany({
+      where: {
+        shareSlug: { not: null },
+        isPrivate: false,
+      },
+      select: {
+        shareSlug: true,
+        createdAt: true,
+        updatedAt: true,
+        isFeaturedInCommunity: true,
+      },
+      orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
+      take: 5000,
+    })
+
+    const shareEntries: MetadataRoute.Sitemap = publicShares
+      .filter((project): project is typeof project & { shareSlug: string } => Boolean(project.shareSlug))
+      .map((project) => ({
+        url: absoluteUrl(`/share/${project.shareSlug}`),
+        lastModified: project.updatedAt ?? project.createdAt,
+        changeFrequency: "weekly",
+        priority: project.isFeaturedInCommunity ? 0.8 : 0.7,
+      }))
+
+    return [...staticEntries, ...shareEntries]
+  } catch (error) {
+    console.error("Failed to build dynamic sitemap entries:", error)
+    return staticEntries
+  }
+}
+

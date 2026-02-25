@@ -36,6 +36,29 @@ interface SharePageClientProps {
   initialAuthorized: boolean
 }
 
+function incrementShareView(slug: string) {
+  const payload = JSON.stringify({ slug })
+
+  if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+    const sent = navigator.sendBeacon(
+      "/api/share-view",
+      new Blob([payload], { type: "application/json" }),
+    )
+    if (sent) {
+      return
+    }
+  }
+
+  try {
+    const request = new XMLHttpRequest()
+    request.open("POST", "/api/share-view", true)
+    request.setRequestHeader("Content-Type", "application/json")
+    request.send(payload)
+  } catch (error) {
+    console.error("Failed to increment view count:", error)
+  }
+}
+
 export function SharePageClient({ slug, project, initialAuthorized }: SharePageClientProps) {
   const [isAuthorized, setIsAuthorized] = useState(initialAuthorized)
   const [password, setPassword] = useState("")
@@ -49,14 +72,7 @@ export function SharePageClient({ slug, project, initialAuthorized }: SharePageC
     }
 
     hasIncrementedRef.current = true
-
-    fetch("/api/share-view", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug }),
-    }).catch((error) => {
-      console.error("Failed to increment view count:", error)
-    })
+    incrementShareView(slug)
   }, [isAuthorized, slug])
 
   async function handlePasswordSubmit(e: React.FormEvent) {

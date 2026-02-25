@@ -11,20 +11,36 @@ import { cacheLife } from "next/cache";
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
 import { AboutAuthCtas } from "@/components/about/about-auth-ctas";
+import { absoluteUrl } from "@/lib/seo/site";
 
 export const metadata: Metadata = {
   title: "About Us",
   description:
     "Learn about Screensplit's mission to make visual comparisons effortless. Built for creators, by creators. Privacy-first, simple, and always free.",
+  alternates: {
+    canonical: "/about",
+  },
   openGraph: {
     title: "About Screensplit",
     description:
       "Learn about our mission to make visual comparisons effortless. Built for creators, by creators.",
+    url: absoluteUrl("/about"),
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "About Screensplit",
+      },
+    ],
   },
   twitter: {
+    card: "summary_large_image",
     title: "About Screensplit",
     description:
       "Learn about our mission to make visual comparisons effortless. Built for creators, by creators.",
+    images: [absoluteUrl("/twitter-image")],
   },
 };
 

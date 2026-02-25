@@ -134,3 +134,14 @@
     radial-gradient(900px 500px at 25% 50%, oklch(0.86 0.16 84 / 20%), transparent 55%),
     linear-gradient(to right, oklch(0.08 0.02 40 / 92%), oklch(0.08 0.02 40 / 70%));
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

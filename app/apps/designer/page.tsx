@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -187,6 +188,39 @@ const ALLOWED_LOGO_MIME_TYPES = new Set([
 ])
 const DIRECT_R2_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_R2_DIRECT_UPLOAD !== "false"
 
+type DesignerTextResponse = {
+  bottomRightText?: unknown
+  bottomRightHistory?: unknown
+  error?: string
+}
+
+type DesignerLogoResponse = {
+  logoUrl?: unknown
+  error?: string
+}
+
+const designerTextFetcher = async (url: string): Promise<DesignerTextResponse> => {
+  const response = await fetch(url)
+  const data = (await response.json().catch(() => ({}))) as DesignerTextResponse
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to load saved designer text")
+  }
+
+  return data
+}
+
+const designerLogoFetcher = async (url: string): Promise<DesignerLogoResponse> => {
+  const response = await fetch(url)
+  const data = (await response.json().catch(() => ({}))) as DesignerLogoResponse
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to load saved logo")
+  }
+
+  return data
+}
+
 export default function DesignerPage() {
   const { data: session } = authClient.useSession()
   const desktopExportMenuRef = useRef<HTMLDivElement>(null)
@@ -213,9 +247,7 @@ export default function DesignerPage() {
   const [bottomRightText, setBottomRightText] = useState("")
   const [savedBottomRightText, setSavedBottomRightText] = useState("")
   const [bottomRightHistory, setBottomRightHistory] = useState<string[]>([])
-  const [isDesignerTextLoading, setIsDesignerTextLoading] = useState(true)
   const [isDesignerTextSaving, setIsDesignerTextSaving] = useState(false)
-  const [isLogoLoading, setIsLogoLoading] = useState(true)
   const [isLogoUploading, setIsLogoUploading] = useState(false)
   const [isLogoRemoving, setIsLogoRemoving] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -253,6 +285,26 @@ export default function DesignerPage() {
     DESIGNER_EXPORT_OPTIONS.find((option) => option.id === activeExportFormat) ?? null
   const shouldShowMobileExportButton = Boolean(imageElement) && !isMobileAccountMenuOpen
   const shouldShowDesktopExportButton = Boolean(imageElement)
+  const {
+    data: designerTextData,
+    error: designerTextError,
+    isLoading: isDesignerTextLoading,
+  } = useSWR<DesignerTextResponse>("/api/user/designer-text", designerTextFetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    shouldRetryOnError: false,
+  })
+  const {
+    data: designerLogoData,
+    error: designerLogoError,
+    isLoading: isLogoLoading,
+  } = useSWR<DesignerLogoResponse>("/api/user/designer-logo", designerLogoFetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    shouldRetryOnError: false,
+  })
 
   const applyBrandColorPreset = useCallback((preset: BrandColorPreset) => {
     setAllTextColor(preset.allTextColor)
@@ -717,81 +769,38 @@ export default function DesignerPage() {
   }, [renderCanvas])
 
   useEffect(() => {
-    let isMounted = true
+    if (!designerTextData) return
 
-    const loadDesignerText = async () => {
-      setIsDesignerTextLoading(true)
-      try {
-        const response = await fetch("/api/user/designer-text")
-        const data = await response.json()
+    const savedText = typeof designerTextData.bottomRightText === "string" ? designerTextData.bottomRightText : ""
+    const savedHistory = Array.isArray(designerTextData.bottomRightHistory)
+      ? designerTextData.bottomRightHistory.filter((item: unknown): item is string => typeof item === "string")
+      : []
 
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load saved designer text")
-        }
-
-        if (!isMounted) return
-
-        const savedText = typeof data.bottomRightText === "string" ? data.bottomRightText : ""
-        const savedHistory = Array.isArray(data.bottomRightHistory)
-          ? data.bottomRightHistory.filter((item: unknown): item is string => typeof item === "string")
-          : []
-
-        setBottomRightText(savedText)
-        setSavedBottomRightText(savedText)
-        setBottomRightHistory(savedHistory)
-      } catch (error) {
-        if (isMounted) {
-          toast.error("Failed to load saved designer text")
-        }
-      } finally {
-        if (isMounted) {
-          setIsDesignerTextLoading(false)
-        }
-      }
-    }
-
-    loadDesignerText()
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+    setBottomRightText(savedText)
+    setSavedBottomRightText(savedText)
+    setBottomRightHistory(savedHistory)
+  }, [designerTextData])
 
   useEffect(() => {
-    let isMounted = true
-
-    const loadDesignerLogo = async () => {
-      setIsLogoLoading(true)
-      try {
-        const response = await fetch("/api/user/designer-logo")
-        const data = await response.json()
-
-        if (!response.ok) {
-          throw new Error(data.error || "Failed to load saved logo")
-        }
-
-        if (!isMounted) return
-        const savedLogoUrl = typeof data.logoUrl === "string" ? data.logoUrl : ""
-        setLogoUrl(savedLogoUrl)
-        setLogoAssetVersion(Date.now())
-        setShowLogo(Boolean(savedLogoUrl))
-      } catch (error) {
-        if (isMounted) {
-          toast.error("Failed to load saved logo")
-        }
-      } finally {
-        if (isMounted) {
-          setIsLogoLoading(false)
-        }
-      }
+    if (designerTextError) {
+      toast.error("Failed to load saved designer text")
     }
+  }, [designerTextError])
 
-    loadDesignerLogo()
+  useEffect(() => {
+    if (!designerLogoData) return
 
-    return () => {
-      isMounted = false
+    const savedLogoUrl = typeof designerLogoData.logoUrl === "string" ? designerLogoData.logoUrl : ""
+    setLogoUrl(savedLogoUrl)
+    setLogoAssetVersion(Date.now())
+    setShowLogo(Boolean(savedLogoUrl))
+  }, [designerLogoData])
+
+  useEffect(() => {
+    if (designerLogoError) {
+      toast.error("Failed to load saved logo")
     }
-  }, [])
+  }, [designerLogoError])
 
   useEffect(() => {
     if (!isBelowImageBlackoutMode) return

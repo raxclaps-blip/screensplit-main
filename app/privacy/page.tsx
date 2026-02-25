@@ -14,20 +14,36 @@ import {
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
+import { absoluteUrl } from "@/lib/seo/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
     "Read how Screensplit handles your data, privacy rights, and security practices.",
+  alternates: {
+    canonical: "/privacy",
+  },
   openGraph: {
     title: "Privacy Policy - Screensplit",
     description:
       "Understand what data Screensplit collects, how it is used, and your privacy choices.",
+    url: absoluteUrl("/privacy"),
+    type: "article",
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "Screensplit privacy policy",
+      },
+    ],
   },
   twitter: {
+    card: "summary_large_image",
     title: "Privacy Policy - Screensplit",
     description:
       "Understand what data Screensplit collects, how it is used, and your privacy choices.",
+    images: [absoluteUrl("/twitter-image")],
   },
   robots: {
     index: true,

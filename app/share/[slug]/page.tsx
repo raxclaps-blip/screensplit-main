@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import type { ImageObject, WebPage, WithContext } from "schema-dts"
 import { notFound } from "next/navigation"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
@@ -6,9 +7,19 @@ import { SharePageClient, type ShareProjectData } from "@/components/share/share
 import { Header } from "@/components/landing/Header"
 import { Footer } from "@/components/landing/Footer"
 import { toImageKitUrl } from "@/lib/imagekit"
+import { serializeJsonLd } from "@/lib/seo/json-ld"
+import { SITE_NAME, absoluteUrl } from "@/lib/seo/site"
 
 interface SharePageProps {
   params: Promise<{ slug: string }>
+}
+
+function getSharePreviewImageUrl(slug: string, project: ShareProjectData): string {
+  const previewImagePath = project.isPrivate
+    ? `/api/i/${slug}`
+    : toImageKitUrl(project.finalImageUrl || `/api/i/${slug}`)
+
+  return absoluteUrl(previewImagePath)
 }
 
 async function getShareProject(slug: string): Promise<ShareProjectData | null> {
@@ -67,13 +78,16 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
   const description =
     project.shareMessage?.trim() ||
     `View this before-and-after comparison${creator} on Screensplit.`
-  const previewImageUrl = project.isPrivate
-    ? `/api/i/${slug}`
-    : toImageKitUrl(project.finalImageUrl || `/api/i/${slug}`)
+  const previewImageUrl = getSharePreviewImageUrl(slug, project)
 
   return {
     title: `${project.beforeLabel} vs ${project.afterLabel}${creator} | Screensplit`,
     description,
+    alternates: project.isPrivate
+      ? undefined
+      : {
+          canonical: `/share/${slug}`,
+        },
     robots: {
       index: !project.isPrivate,
       follow: !project.isPrivate,
@@ -82,6 +96,9 @@ export async function generateMetadata({ params }: SharePageProps): Promise<Meta
       title: `${project.beforeLabel} vs ${project.afterLabel} | Screensplit`,
       description,
       type: "article",
+      url: absoluteUrl(`/share/${slug}`),
+      publishedTime: project.createdAt,
+      authors: project.user?.name ? [project.user.name] : undefined,
       images: [{ url: previewImageUrl, alt: "Shared before and after comparison" }],
     },
     twitter: {
@@ -102,9 +119,63 @@ export default async function SharePage({ params }: SharePageProps) {
   }
 
   const initialAuthorized = !project.isPrivate
+  const shareTitle = `${project.beforeLabel} vs ${project.afterLabel}`
+  const shareDescription =
+    project.shareMessage?.trim() ||
+    "View this shared before-and-after comparison on Screensplit."
+  const shareUrl = absoluteUrl(`/share/${slug}`)
+  const previewImageUrl = getSharePreviewImageUrl(slug, project)
+  const isIndexable = !project.isPrivate
+  const shareImageJsonLd: WithContext<ImageObject> | null = isIndexable
+    ? {
+        "@context": "https://schema.org",
+        "@type": "ImageObject",
+        name: shareTitle,
+        description: shareDescription,
+        url: shareUrl,
+        contentUrl: previewImageUrl,
+        thumbnailUrl: previewImageUrl,
+        datePublished: project.createdAt,
+        creator: project.user?.name
+          ? {
+              "@type": "Person",
+              name: project.user.name,
+            }
+          : {
+              "@type": "Organization",
+              name: SITE_NAME,
+              url: absoluteUrl("/"),
+            },
+      }
+    : null
+  const shareWebPageJsonLd: WithContext<WebPage> | null = isIndexable
+    ? {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        name: `${shareTitle} | Screensplit`,
+        description: shareDescription,
+        url: shareUrl,
+        primaryImageOfPage: {
+          "@type": "ImageObject",
+          contentUrl: previewImageUrl,
+        },
+      }
+    : null
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30">
+      {shareImageJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(shareImageJsonLd) }}
+        />
+      ) : null}
+      {shareWebPageJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(shareWebPageJsonLd) }}
+        />
+      ) : null}
       <Header />
       <main className="flex-1 flex flex-col">
         <div className="mx-auto w-full max-w-7xl border-x border-border">

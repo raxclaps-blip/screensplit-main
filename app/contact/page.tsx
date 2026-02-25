@@ -15,20 +15,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ContactAuthCtas } from "@/components/contact/contact-auth-ctas";
+import { absoluteUrl } from "@/lib/seo/site";
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
     "Contact Screensplit for support, product feedback, or collaboration inquiries.",
+  alternates: {
+    canonical: "/contact",
+  },
   openGraph: {
     title: "Contact Screensplit",
     description:
       "Reach the Screensplit team for support, feedback, and partnership conversations.",
+    url: absoluteUrl("/contact"),
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "Contact Screensplit",
+      },
+    ],
   },
   twitter: {
+    card: "summary_large_image",
     title: "Contact Screensplit",
     description:
       "Reach the Screensplit team for support, feedback, and partnership conversations.",
+    images: [absoluteUrl("/twitter-image")],
   },
 };
 

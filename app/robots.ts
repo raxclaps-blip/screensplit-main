@@ -1,16 +1,17 @@
-import { MetadataRoute } from 'next'
- 
+import { MetadataRoute } from "next"
+import { SITE_URL } from "@/lib/seo/site"
+
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://screensplit.vercel.app'
-  
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
-        disallow: ['/api/', '/auth/'],
+        userAgent: "*",
+        allow: ["/", "/about", "/contact", "/community", "/privacy", "/terms", "/share/"],
+        disallow: ["/api/", "/apps/", "/auth/", "/_next/"],
       },
     ],
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   }
 }
+

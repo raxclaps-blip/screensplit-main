@@ -134,10 +134,6 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
   }, [router])
 
   useEffect(() => {
-    setMobileAccountOpen(false)
-  }, [pathname])
-
-  useEffect(() => {
     if (sidebarOpen) {
       setMobileAccountOpen(false)
     }

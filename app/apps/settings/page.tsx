@@ -21,12 +21,26 @@ import {
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { authClient } from "@/lib/auth-client"
+import useSWR from "swr"
 
 type SettingsResponse = {
   user?: {
     createdAt?: string
   }
   authProviders?: string[]
+}
+
+const settingsFetcher = async (url: string): Promise<SettingsResponse> => {
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to load account metadata")
+  }
+
+  return (await response.json()) as SettingsResponse
 }
 
 function formatProviderName(provider: string) {
@@ -47,8 +61,6 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const [profileSaved, setProfileSaved] = useState(false)
-  const [memberSince, setMemberSince] = useState<string>("")
-  const [authProviders, setAuthProviders] = useState<string[]>([])
   
   // Preferences state
   const [emailNotifications, setEmailNotifications] = useState(true)
@@ -76,39 +88,17 @@ export default function SettingsPage() {
       setEmail(session.user.email || "")
     }
   }, [session])
-
-  useEffect(() => {
-    let isMounted = true
-
-    async function loadAccountMetadata() {
-      try {
-        const response = await fetch("/api/user/settings", {
-          method: "GET",
-          cache: "no-store",
-        })
-
-        if (!response.ok) {
-          return
-        }
-
-        const data = (await response.json()) as SettingsResponse
-        if (!isMounted) return
-
-        setMemberSince(data.user?.createdAt || "")
-        setAuthProviders(Array.isArray(data.authProviders) ? data.authProviders : [])
-      } catch {
-        // Keep profile page functional even when metadata fetch fails.
-      }
-    }
-
-    if (session?.user?.id) {
-      loadAccountMetadata()
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [session?.user?.id])
+  const { data: accountMetadata } = useSWR<SettingsResponse>(
+    session?.user?.id ? "/api/user/settings" : null,
+    settingsFetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      shouldRetryOnError: false,
+    },
+  )
+  const authProviders = Array.isArray(accountMetadata?.authProviders) ? accountMetadata.authProviders : []
+  const memberSince = accountMetadata?.user?.createdAt || ""
 
   const authProviderLabel =
     authProviders.length > 0

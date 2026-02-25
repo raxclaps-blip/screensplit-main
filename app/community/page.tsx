@@ -1,4 +1,5 @@
-﻿import type { Metadata } from "next"
+import type { Metadata } from "next"
+import type { CollectionPage, ItemList, WithContext } from "schema-dts"
 import Link from "next/link"
 import { ArrowRight, Eye, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -6,6 +7,8 @@ import { Header } from "@/components/landing/Header"
 import { Footer } from "@/components/landing/Footer"
 import { getFeaturedCommunityComparisons } from "@/lib/community-gallery"
 import { toImageKitUrl } from "@/lib/imagekit"
+import { serializeJsonLd } from "@/lib/seo/json-ld"
+import { SITE_NAME, absoluteUrl } from "@/lib/seo/site"
 
 export const metadata: Metadata = {
   title: "Community Gallery | Screensplit",
@@ -13,6 +16,28 @@ export const metadata: Metadata = {
     "Explore featured before/after comparisons shared by the Screensplit community.",
   alternates: {
     canonical: "/community",
+  },
+  openGraph: {
+    title: "Community Gallery | Screensplit",
+    description:
+      "Explore featured before/after comparisons shared by the Screensplit community.",
+    url: absoluteUrl("/community"),
+    type: "website",
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "Screensplit community gallery preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Community Gallery | Screensplit",
+    description:
+      "Explore featured before/after comparisons shared by the Screensplit community.",
+    images: [absoluteUrl("/twitter-image")],
   },
 }
 
@@ -26,9 +51,55 @@ function formatDate(value: string): string {
 
 export default async function CommunityPage() {
   const items = await getFeaturedCommunityComparisons(60)
+  const collectionPageJsonLd: WithContext<CollectionPage> = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: `Community Gallery | ${SITE_NAME}`,
+    description:
+      "Featured public before-and-after comparisons shared by creators on Screensplit.",
+    url: absoluteUrl("/community"),
+    isPartOf: {
+      "@type": "WebSite",
+      name: SITE_NAME,
+      url: absoluteUrl("/"),
+    },
+  }
+  const itemListJsonLd: WithContext<ItemList> = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    numberOfItems: items.length,
+    itemListElement: items.slice(0, 20).map((item, index) => {
+      const title = item.title || `${item.beforeLabel} vs ${item.afterLabel}`
+      const imageSrc = toImageKitUrl(item.finalImageUrl || `/api/i/${item.shareSlug}`)
+      const shareUrl = absoluteUrl(`/share/${item.shareSlug}`)
+      const imageUrl = absoluteUrl(imageSrc)
+
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        url: shareUrl,
+        item: {
+          "@type": "ImageObject",
+          name: title,
+          url: shareUrl,
+          contentUrl: imageUrl,
+          thumbnailUrl: imageUrl,
+        },
+      }
+    }),
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(collectionPageJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(itemListJsonLd) }}
+      />
       <Header />
 
       <main className="mx-auto mt-16 w-full max-w-7xl border-x border-border">

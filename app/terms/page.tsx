@@ -13,20 +13,36 @@ import {
 import { Header } from "@/components/landing/Header";
 import { Footer } from "@/components/landing/Footer";
 import { Button } from "@/components/ui/button";
+import { absoluteUrl } from "@/lib/seo/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
     "Read Screensplit's Terms of Service, including acceptable use, ownership, limitations, and legal obligations.",
+  alternates: {
+    canonical: "/terms",
+  },
   openGraph: {
     title: "Terms of Service - Screensplit",
     description:
       "Understand the rules, responsibilities, and legal terms for using Screensplit.",
+    url: absoluteUrl("/terms"),
+    type: "article",
+    images: [
+      {
+        url: absoluteUrl("/opengraph-image"),
+        width: 1200,
+        height: 630,
+        alt: "Screensplit terms of service",
+      },
+    ],
   },
   twitter: {
+    card: "summary_large_image",
     title: "Terms of Service - Screensplit",
     description:
       "Understand the rules, responsibilities, and legal terms for using Screensplit.",
+    images: [absoluteUrl("/twitter-image")],
   },
   robots: {
     index: true,
