@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 // Initialize cloud storage client with credentials from environment
 const r2Client = new S3Client({
@@ -10,6 +11,28 @@ const r2Client = new S3Client({
   },
   forcePathStyle: process.env.R2_S3_FORCE_PATH_STYLE === "true",
 })
+
+function getBucketName(): string {
+  const bucketName = process.env.R2_BUCKET
+  if (!bucketName) {
+    throw new Error("Cloud storage bucket environment variable is not set")
+  }
+  return bucketName
+}
+
+function getPublicEndpoint(): string {
+  const endpoint = (process.env.R2_S3_ENDPOINT || "").trim().replace(/\/+$/, "")
+  if (!endpoint) {
+    throw new Error("Cloud storage endpoint environment variable is not set")
+  }
+  return endpoint
+}
+
+export function buildR2ObjectUrl(key: string): string {
+  const bucketName = getBucketName()
+  const endpoint = getPublicEndpoint()
+  return `${endpoint}/${bucketName}/${key}`
+}
 
 /**
  * Upload a file to cloud storage
@@ -23,11 +46,7 @@ export async function uploadToR2(
   key: string,
   contentType: string,
 ): Promise<string> {
-  const bucketName = process.env.R2_BUCKET
-
-  if (!bucketName) {
-    throw new Error("Cloud storage bucket environment variable is not set")
-  }
+  const bucketName = getBucketName()
 
   try {
     const command = new PutObjectCommand({
@@ -35,18 +54,46 @@ export async function uploadToR2(
       Key: key,
       Body: buffer,
       ContentType: contentType,
+      CacheControl: "public, max-age=31536000, immutable",
     })
 
     await r2Client.send(command)
 
-    // Construct the public URL
-    // Note: You may need to adjust this based on your cloud storage public URL configuration
-    const publicUrl = `${process.env.R2_S3_ENDPOINT}/${bucketName}/${key}`
-
-    return publicUrl
+    return buildR2ObjectUrl(key)
   } catch (error) {
     console.error("Error uploading to cloud storage:", error)
     throw new Error("Failed to upload file to cloud storage")
+  }
+}
+
+type PresignedUploadInput = {
+  key: string
+  contentType: string
+  expiresInSeconds?: number
+}
+
+export async function createPresignedR2Upload({
+  key,
+  contentType,
+  expiresInSeconds = 900,
+}: PresignedUploadInput): Promise<{ uploadUrl: string; objectUrl: string; expiresInSeconds: number }> {
+  const bucketName = getBucketName()
+
+  const command = new PutObjectCommand({
+    Bucket: bucketName,
+    Key: key,
+    ContentType: contentType,
+    CacheControl: "public, max-age=31536000, immutable",
+  })
+
+  const uploadUrl = await getSignedUrl(r2Client, command, {
+    expiresIn: Math.min(Math.max(expiresInSeconds, 60), 3600),
+  })
+
+  return {
+    uploadUrl,
+    objectUrl: buildR2ObjectUrl(key),
+    expiresInSeconds: Math.min(Math.max(expiresInSeconds, 60), 3600),
   }
 }
 
@@ -67,11 +114,7 @@ export function generateImageKey(format: "png" | "jpeg"): string {
  * @returns The file stream and metadata
  */
 export async function getFromR2(key: string) {
-  const bucketName = process.env.R2_BUCKET
-
-  if (!bucketName) {
-    throw new Error("Cloud storage bucket environment variable is not set")
-  }
+  const bucketName = getBucketName()
 
   try {
     const command = new GetObjectCommand({

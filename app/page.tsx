@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { Header } from "@/components/landing/Header";
 import { Hero } from "@/components/landing/Hero";
 import { SocialProofStrip } from "@/components/landing/SocialProofStrip";
+import { CommunityFeatured } from "@/components/landing/CommunityFeatured";
 import { FeaturesGrid } from "@/components/landing/FeaturesGrid";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { TrustPrivacy } from "@/components/landing/TrustPrivacy";
@@ -27,6 +28,7 @@ export default function LandingPage() {
         <div className="mx-auto w-full max-w-7xl divide-y divide-border border-x border-border">
           <Hero />
           <SocialProofStrip />
+          <CommunityFeatured />
           <FeaturesGrid />
           <HowItWorks />
           <TrustPrivacy />

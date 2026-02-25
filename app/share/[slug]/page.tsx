@@ -3,6 +3,8 @@ import { notFound } from "next/navigation"
 import { unstable_cache } from "next/cache"
 import { prisma } from "@/lib/prisma"
 import { SharePageClient, type ShareProjectData } from "@/components/share/share-page-client"
+import { Header } from "@/components/landing/Header"
+import { Footer } from "@/components/landing/Footer"
 import { toImageKitUrl } from "@/lib/imagekit"
 
 interface SharePageProps {
@@ -26,7 +28,6 @@ async function getShareProject(slug: string): Promise<ShareProjectData | null> {
           user: {
             select: {
               name: true,
-              image: true,
             },
           },
         },
@@ -103,10 +104,20 @@ export default async function SharePage({ params }: SharePageProps) {
   const initialAuthorized = !project.isPrivate
 
   return (
-    <SharePageClient
-      slug={slug}
-      project={project}
-      initialAuthorized={initialAuthorized}
-    />
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary/30">
+      <Header />
+      <main className="flex-1 flex flex-col">
+        <div className="mx-auto w-full max-w-7xl border-x border-border">
+          <SharePageClient
+            slug={slug}
+            project={project}
+            initialAuthorized={initialAuthorized}
+          />
+        </div>
+      </main>
+      <div className="mx-auto w-full max-w-7xl border-x border-border">
+        <Footer />
+      </div>
+    </div>
   )
 }

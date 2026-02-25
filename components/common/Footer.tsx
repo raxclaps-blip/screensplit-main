@@ -48,6 +48,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/community"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Community Gallery
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/#features"
                   className="hover:text-foreground transition-colors"
                 >

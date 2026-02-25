@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect, useCallback } from "react"
+import { createPortal } from "react-dom"
 import { ArrowLeft, Download, Loader2, Upload, AlignLeft, AlignCenter, AlignRight, Type, Palette, Image as ImageIcon, Settings2, Undo2, Redo2, RotateCcw, Share2, Copy, FileText, Printer, Code, Instagram, Twitter, Facebook, Bold, Italic, Pipette, ArrowUpLeft, ArrowUp, ArrowUpRight, ArrowLeft as ArrowLeftIcon, Dot, ArrowRight as ArrowRightIcon, ArrowDownLeft, ArrowDown, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -78,14 +79,14 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   const [showTextBackground, setShowTextBackground] = useState(DEFAULT_VALUES.showTextBackground)
   const [textBgOpacity, setTextBgOpacity] = useState(DEFAULT_VALUES.textBgOpacity)
   const [textPosition, setTextPosition] = useState<"top-left" | "top-center" | "top-right" | "center-left" | "center" | "center-right" | "bottom-left" | "bottom-center" | "bottom-right">(DEFAULT_VALUES.textPosition)
-  
+
   // Typography
   const [fontFamily, setFontFamily] = useState(DEFAULT_VALUES.fontFamily)
   const [mainTextBold, setMainTextBold] = useState(DEFAULT_VALUES.mainTextBold)
   const [mainTextItalic, setMainTextItalic] = useState(DEFAULT_VALUES.mainTextItalic)
   const [subtextBold, setSubtextBold] = useState(DEFAULT_VALUES.subtextBold)
   const [subtextItalic, setSubtextItalic] = useState(DEFAULT_VALUES.subtextItalic)
-  
+
   // Background effects
   const [borderWidth, setBorderWidth] = useState(DEFAULT_VALUES.borderWidth)
   const [borderColor, setBorderColor] = useState(DEFAULT_VALUES.borderColor)
@@ -96,7 +97,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   const [blurAmount, setBlurAmount] = useState(DEFAULT_VALUES.blurAmount)
   const [bgPadding, setBgPadding] = useState(DEFAULT_VALUES.bgPadding)
   const [bgShape, setBgShape] = useState<"rounded" | "pill" | "circle" | "hexagon">(DEFAULT_VALUES.bgShape)
-  
+
   // Image filters
   const [brightness, setBrightness] = useState(DEFAULT_VALUES.brightness)
   const [contrast, setContrast] = useState(DEFAULT_VALUES.contrast)
@@ -120,9 +121,15 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   const [history, setHistory] = useState<EditorState[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
   const isRestoringRef = useRef(false)
-  
+
   // Sticky canvas state
   const [stickyCanvas, setStickyCanvas] = useState(false)
+
+  const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setHeaderActionsTarget(document.getElementById("header-actions"))
+  }, [])
 
   useEffect(() => {
     return () => {
@@ -174,7 +181,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   // Save state to history
   const saveToHistory = useCallback(() => {
     if (isRestoringRef.current) return
-    
+
     const currentState = getCurrentState()
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1)
@@ -281,7 +288,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     if (!canvas) return
 
     const { width, height, name } = socialPresets[preset]
-    
+
     // Create temporary canvas with preset dimensions
     const tempCanvas = document.createElement('canvas')
     tempCanvas.width = width
@@ -355,7 +362,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
       // Use jsPDF library (we'll need to install this)
       // For now, we'll create a workaround using canvas in a new window
       const dataUrl = canvas.toDataURL('image/png', 1.0)
-      
+
       // Create a printable version
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
@@ -409,12 +416,12 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
     // Get the data URL
     const dataUrl = canvas.toDataURL('image/png', 1.0)
-    
+
     // For a real implementation, you'd upload this to your server
     // For now, we'll create an embed code with a placeholder
     const width = canvas.width
     const height = canvas.height
-    
+
     const code = `<!-- ScreenSplit Comparison Embed -->
 <div class="screensplit-embed" style="max-width: ${width}px; margin: 0 auto;">
   <Image 
@@ -449,7 +456,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
     if (!canvas) return
 
     const dataUrl = canvas.toDataURL('image/png', 1.0)
-    
+
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
       toast.error("Popup blocked", {
@@ -520,12 +527,12 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
     // In a real implementation, you'd upload the image first and get a URL
     // For now, we'll use the share URL if available, or show instructions
-    
+
     const text = encodeURIComponent(`Check out this before/after comparison created with ScreenSplit!`)
     const url = encodeURIComponent(shareSlug ? `${window.location.origin}/share/${shareSlug}` : window.location.origin)
 
     let shareUrl = ''
-    
+
     switch (platform) {
       case 'twitter':
         shareUrl = `https://twitter.com/intent/tweet?text=${text}&url=${url}`
@@ -580,18 +587,18 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
       const hasSubtext = subtext.trim().length > 0
       const subtextFontSize = fontSize * 0.5
       const lineSpacing = fontSize * 0.3
-      
+
       // Build font strings with family and style
       const mainFontWeight = mainTextBold ? 'bold' : 'normal'
       const mainFontStyle = mainTextItalic ? 'italic' : 'normal'
       const subtextFontWeight = subtextBold ? 'bold' : 'normal'
       const subtextFontStyle = subtextItalic ? 'italic' : 'normal'
-      
+
       // Measure main text
       ctx.font = `${mainFontStyle} ${mainFontWeight} ${fontSize}px ${fontFamily}, sans-serif`
       const mainMetrics = ctx.measureText(text)
       const mainTextWidth = mainMetrics.width
-      
+
       // Measure subtext if exists
       let subtextWidth = 0
       if (hasSubtext) {
@@ -599,18 +606,18 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
         const subtextMetrics = ctx.measureText(subtext)
         subtextWidth = subtextMetrics.width
       }
-      
+
       // Calculate dimensions with custom padding
       const maxTextWidth = Math.max(mainTextWidth, subtextWidth)
       const padding = fontSize * bgPadding
       const bgWidth = maxTextWidth + padding * 2
       const totalTextHeight = hasSubtext ? fontSize + lineSpacing + subtextFontSize : fontSize
       const bgHeight = totalTextHeight + padding * 1.5
-      
+
       // Calculate position based on textPosition
       let bgX = x
       let bgY = y
-      
+
       // Horizontal alignment
       if (textPosition.includes("left")) {
         bgX = x + padding
@@ -619,7 +626,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
       } else {
         bgX = x + (width - bgWidth) / 2
       }
-      
+
       // Vertical alignment
       if (textPosition.startsWith("top")) {
         bgY = y + padding
@@ -628,26 +635,26 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
       } else {
         bgY = y + (height - bgHeight) / 2
       }
-      
+
       // Calculate text center positions relative to background
       const centerX = bgX + bgWidth / 2
       const centerY = bgY + bgHeight / 2
-      
+
       // Draw background (if enabled)
       if (showTextBackground) {
         ctx.save()
-        
+
         // Apply blur effect if enabled
         if (blurAmount > 0) {
           ctx.filter = `blur(${blurAmount}px)`
         }
-        
+
         // Set opacity
         ctx.globalAlpha = textBgOpacity
-        
+
         // Create path based on shape
         ctx.beginPath()
-        
+
         switch (bgShape) {
           case 'pill':
             ctx.roundRect(bgX, bgY, bgWidth, bgHeight, bgHeight / 2)
@@ -676,7 +683,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
           default: // rounded
             ctx.roundRect(bgX, bgY, bgWidth, bgHeight, 20)
         }
-        
+
         // Fill with gradient or solid color
         if (useGradient) {
           const angleRad = (gradientAngle * Math.PI) / 180
@@ -685,7 +692,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
           const y1 = centerY - (Math.sin(angleRad) * gradientLength) / 2
           const x2 = centerX + (Math.cos(angleRad) * gradientLength) / 2
           const y2 = centerY + (Math.sin(angleRad) * gradientLength) / 2
-          
+
           const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
           gradient.addColorStop(0, gradientColor1)
           gradient.addColorStop(1, gradientColor2)
@@ -693,9 +700,9 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
         } else {
           ctx.fillStyle = textBgColor
         }
-        
+
         ctx.fill()
-        
+
         // Draw border if enabled
         if (borderWidth > 0) {
           ctx.globalAlpha = 1.0
@@ -703,20 +710,20 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
           ctx.lineWidth = borderWidth
           ctx.stroke()
         }
-        
+
         ctx.restore()
       }
-      
+
       // Draw main text
       ctx.font = `${mainFontStyle} ${mainFontWeight} ${fontSize}px ${fontFamily}, sans-serif`
       ctx.fillStyle = textColor
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       ctx.globalAlpha = 1.0
-      
+
       const mainTextY = hasSubtext ? centerY - (lineSpacing + subtextFontSize) / 2 : centerY
       ctx.fillText(text, centerX, mainTextY)
-      
+
       // Draw subtext if exists
       if (hasSubtext) {
         ctx.font = `${subtextFontStyle} ${subtextFontWeight} ${subtextFontSize}px ${fontFamily}, sans-serif`
@@ -735,7 +742,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
         // Build filter string
         const filterString = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscale}%) sepia(${sepia}%)`
-        
+
         if (direction === "horizontal") {
           const targetHeight = Math.min(maxHeight, Math.max(beforeImg.height, afterImg.height))
           const beforeWidth = (beforeImg.width * targetHeight) / beforeImg.height
@@ -980,27 +987,29 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
   return (
     <TooltipProvider>
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" onClick={onBack} className="mb-6 gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back to Upload
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Return to upload screen</TooltipContent>
-        </Tooltip>
+        {headerActionsTarget && createPortal(
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={onBack} className="gap-2 rounded-full">
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Return to upload screen</TooltipContent>
+          </Tooltip>,
+          headerActionsTarget
+        )}
 
         <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1fr_400px]">
           {/* Preview */}
-          <div className={`w-full space-y-4 lg:self-start ${
-            stickyCanvas ? 'sticky top-20 z-40 bg-background pb-4 pt-2' : 'lg:sticky lg:top-8'
-          }`}>
+          <div className={`w-full space-y-4 lg:self-start ${stickyCanvas ? 'sticky top-20 z-40 bg-background pb-4 pt-2' : 'lg:sticky lg:top-8'
+            }`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      onClick={handleUndo} 
+                    <Button
+                      onClick={handleUndo}
                       disabled={historyIndex <= 0}
                       variant="outline"
                       size="icon"
@@ -1014,8 +1023,8 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      onClick={handleRedo} 
+                    <Button
+                      onClick={handleRedo}
                       disabled={historyIndex >= history.length - 1}
                       variant="outline"
                       size="icon"
@@ -1029,8 +1038,8 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      onClick={handleResetToDefaults} 
+                    <Button
+                      onClick={handleResetToDefaults}
                       variant="outline"
                       size="icon"
                       className="rounded-full shrink-0"
@@ -1043,10 +1052,10 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                      <Button 
-                        onClick={() => void handleDownloadNow()} 
-                        className="gap-2 bg-primary rounded-full shrink-0"
-                      >
+                    <Button
+                      onClick={() => void handleDownloadNow()}
+                      className="gap-2 bg-primary rounded-full shrink-0"
+                    >
                       <Download className="h-4 w-4" />
                       <span className="hidden sm:inline">Download Now</span>
                       <span className="sm:hidden">Download</span>
@@ -1057,9 +1066,9 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      onClick={() => void handleSaveToCloud()} 
-                      disabled={isUploading} 
+                    <Button
+                      onClick={() => void handleSaveToCloud()}
+                      disabled={isUploading}
                       variant="outline"
                       className="gap-2 rounded-full shrink-0"
                     >
@@ -1087,7 +1096,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
             <div className="grid grid-cols-2 gap-2 w-full">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     onClick={() => setSocialPresetDialogOpen(true)}
                     variant="outline"
                     size="sm"
@@ -1102,7 +1111,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     onClick={handleCopyToClipboard}
                     variant="outline"
                     size="sm"
@@ -1117,7 +1126,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     onClick={handleExportPDF}
                     variant="outline"
                     size="sm"
@@ -1132,7 +1141,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     onClick={handlePrint}
                     variant="outline"
                     size="sm"
@@ -1147,7 +1156,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
 
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     onClick={handleGenerateEmbed}
                     variant="outline"
                     size="sm"
@@ -1164,7 +1173,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <DropdownMenuTrigger asChild>
-                      <Button 
+                      <Button
                         variant="outline"
                         size="sm"
                         className="gap-1.5 w-full justify-start text-xs sm:text-sm"
@@ -1217,7 +1226,7 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
               </div>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button 
+                  <Button
                     onClick={handleResetToDefaults}
                     variant="ghost"
                     size="sm"
@@ -1231,829 +1240,829 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
               </Tooltip>
             </div>
 
-          {/* Direction */}
-          <div className="flex items-end gap-3">
-            <div className="flex-1 space-y-2">
-              <Label>Layout Direction</Label>
-              <Select value={direction} onValueChange={(value: "horizontal" | "vertical") => setDirection(value)}>
+            {/* Direction */}
+            <div className="flex items-end gap-3">
+              <div className="flex-1 space-y-2">
+                <Label>Layout Direction</Label>
+                <Select value={direction} onValueChange={(value: "horizontal" | "vertical") => setDirection(value)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="horizontal">Side by Side</SelectItem>
+                    <SelectItem value="vertical">Top and Bottom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mb-1 flex items-center gap-2">
+                <Label htmlFor="show-labels-text" className="cursor-pointer whitespace-nowrap text-xs text-muted-foreground">
+                  Show Before/After Texts
+                </Label>
+                <Switch
+                  id="show-labels-text"
+                  checked={showLabelsText}
+                  onCheckedChange={setShowLabelsText}
+                />
+              </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            <Accordion type="single" defaultValue="typography" collapsible className="w-full">
+
+              {/* Labels Section */}
+              <AccordionItem value="labels">
+                <AccordionTrigger className="text-sm font-semibold hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Type className="h-4 w-4 text-primary" />
+                    </div>
+                    <span>Labels & Text</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  {/* Before Text */}
+                  <div className="space-y-2">
+                    <Label>Before Label</Label>
+                    <Input value={beforeText} onChange={(e) => setBeforeText(e.target.value)} placeholder="Before" />
+                    <Input
+                      value={beforeSubtext}
+                      onChange={(e) => setBeforeSubtext(e.target.value)}
+                      placeholder="Subheading (optional - e.g., date/time)"
+                      className="text-sm"
+                    />
+                    <div className="flex justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBeforeSubtext(new Date().toLocaleDateString())}
+                        className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
+                      >
+                        Add Date
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBeforeSubtext(new Date().toLocaleTimeString())}
+                        className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
+                      >
+                        Add Time
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setBeforeSubtext(new Date().toLocaleString())}
+                        className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
+                      >
+                        Both
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* After Text */}
+                  <div className="space-y-2">
+                    <Label>After Label</Label>
+                    <Input value={afterText} onChange={(e) => setAfterText(e.target.value)} placeholder="After" />
+                    <Input
+                      value={afterSubtext}
+                      onChange={(e) => setAfterSubtext(e.target.value)}
+                      placeholder="Subheading (optional - e.g., date/time)"
+                      className="text-sm"
+                    />
+                    <div className="flex justify-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAfterSubtext(new Date().toLocaleDateString())}
+                        className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
+                      >
+                        Add Date
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAfterSubtext(new Date().toLocaleTimeString())}
+                        className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
+                      >
+                        Add Time
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAfterSubtext(new Date().toLocaleString())}
+                        className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
+                      >
+                        Both
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Typography Section */}
+              <AccordionItem value="typography">
+                <AccordionTrigger className="text-sm font-semibold hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Type className="h-4 w-4 text-primary" />
+                    </div>
+                    <span>Typography</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-6 pt-4">
+                  {/* Font Family */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Font Family</Label>
+                      <span className="text-xs text-muted-foreground">{fontFamily}</span>
+                    </div>
+                    <Select value={fontFamily} onValueChange={setFontFamily}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Inter">Inter</SelectItem>
+                        <SelectItem value="Roboto">Roboto</SelectItem>
+                        <SelectItem value="Montserrat">Montserrat</SelectItem>
+                        <SelectItem value="Poppins">Poppins</SelectItem>
+                        <SelectItem value="Open Sans">Open Sans</SelectItem>
+                        <SelectItem value="Lato">Lato</SelectItem>
+                        <SelectItem value="Playfair Display">Playfair Display</SelectItem>
+                        <SelectItem value="Oswald">Oswald</SelectItem>
+                        <SelectItem value="Raleway">Raleway</SelectItem>
+                        <SelectItem value="Arial">Arial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  {/* Font Size */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Font Size</Label>
+                      <span className="text-sm font-semibold tabular-nums">{fontSize}px</span>
+                    </div>
+                    <Slider
+                      value={[fontSize]}
+                      onValueChange={(value) => setFontSize(value[0])}
+                      min={24}
+                      max={120}
+                      step={4}
+                      className="py-2"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>24px</span>
+                      <span>120px</span>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Text Styling */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Text Style</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Main Text */}
+                      <div className="space-y-2">
+                        <span className="text-xs text-muted-foreground">Main Text</span>
+                        <div className="flex gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant={mainTextBold ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setMainTextBold(!mainTextBold)}
+                                className="flex-1 h-9"
+                              >
+                                <Bold className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Bold</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant={mainTextItalic ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setMainTextItalic(!mainTextItalic)}
+                                className="flex-1 h-9"
+                              >
+                                <Italic className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Italic</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                      {/* Subtext */}
+                      <div className="space-y-2">
+                        <span className="text-xs text-muted-foreground">Subtext</span>
+                        <div className="flex gap-2">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant={subtextBold ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSubtextBold(!subtextBold)}
+                                className="flex-1 h-9"
+                              >
+                                <Bold className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Bold</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant={subtextItalic ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => setSubtextItalic(!subtextItalic)}
+                                className="flex-1 h-9"
+                              >
+                                <Italic className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Italic</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Text Color */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Text Color</Label>
+                      <span className="text-xs font-mono text-muted-foreground uppercase">{textColor}</span>
+                    </div>
+                    <div className="flex gap-3">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="relative">
+                            <Input
+                              type="color"
+                              value={textColor}
+                              onChange={(e) => setTextColor(e.target.value)}
+                              className="h-11 w-14 cursor-pointer border-2 p-1"
+                            />
+                            <Pipette className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Pick a color</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Input
+                        value={textColor}
+                        onChange={(e) => setTextColor(e.target.value)}
+                        className="flex-1 h-11 font-mono text-sm"
+                        placeholder="#000000"
+                      />
+                    </div>
+                    {/* Color Presets */}
+                    <div className="grid grid-cols-6 gap-2">
+                      {['#ffffff', '#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b'].map((color) => (
+                        <Tooltip key={color}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => setTextColor(color)}
+                              className="h-9 rounded-lg border-2 transition-all hover:scale-110 hover:border-primary"
+                              style={{ backgroundColor: color }}
+                              aria-label={`Set color to ${color}`}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="font-mono text-xs">{color}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Text Position */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Text Position</Label>
+                    <div className="grid grid-cols-3 gap-2 rounded-lg bg-secondary/50 p-2">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "top-left" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("top-left")}
+                            className="h-12"
+                          >
+                            <ArrowUpLeft className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Top Left</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "top-center" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("top-center")}
+                            className="h-12"
+                          >
+                            <ArrowUp className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Top Center</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "top-right" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("top-right")}
+                            className="h-12"
+                          >
+                            <ArrowUpRight className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Top Right</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "center-left" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("center-left")}
+                            className="h-12"
+                          >
+                            <ArrowLeftIcon className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Center Left</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "center" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("center")}
+                            className="h-12"
+                          >
+                            <Dot className="h-6 w-6" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Center</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "center-right" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("center-right")}
+                            className="h-12"
+                          >
+                            <ArrowRightIcon className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Center Right</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "bottom-left" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("bottom-left")}
+                            className="h-12"
+                          >
+                            <ArrowDownLeft className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Bottom Left</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "bottom-center" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("bottom-center")}
+                            className="h-12"
+                          >
+                            <ArrowDown className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Bottom Center</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={textPosition === "bottom-right" ? "default" : "ghost"}
+                            size="sm"
+                            onClick={() => setTextPosition("bottom-right")}
+                            className="h-12"
+                          >
+                            <ArrowDownRight className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Bottom Right</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Background Effects Section */}
+              <AccordionItem value="background">
+                <AccordionTrigger className="text-sm font-semibold hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      <Palette className="h-4 w-4 text-primary" />
+                    </div>
+                    <span>Background Effects</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  {/* Show Background Toggle */}
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="show-background" className="cursor-pointer">Show Text Background</Label>
+                    <Switch
+                      id="show-background"
+                      checked={showTextBackground}
+                      onCheckedChange={setShowTextBackground}
+                    />
+                  </div>
+
+                  {showTextBackground && (
+                    <>
+                      {/* Background Shape */}
+                      <div className="space-y-2">
+                        <Label>Background Shape</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <Button
+                            type="button"
+                            variant={bgShape === "rounded" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setBgShape("rounded")}
+                          >
+                            Rounded
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={bgShape === "pill" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setBgShape("pill")}
+                          >
+                            Pill
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={bgShape === "circle" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setBgShape("circle")}
+                          >
+                            Circle
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={bgShape === "hexagon" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setBgShape("hexagon")}
+                          >
+                            Hexagon
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Gradient Toggle */}
+                      <div className="flex items-center justify-between space-x-2">
+                        <Label htmlFor="use-gradient" className="cursor-pointer">Use Gradient</Label>
+                        <Switch
+                          id="use-gradient"
+                          checked={useGradient}
+                          onCheckedChange={setUseGradient}
+                        />
+                      </div>
+
+                      {useGradient ? (
+                        <>
+                          {/* Gradient Colors */}
+                          <div className="space-y-2">
+                            <Label>Gradient Color 1</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="color"
+                                value={gradientColor1}
+                                onChange={(e) => setGradientColor1(e.target.value)}
+                                className="h-10 w-20 cursor-pointer"
+                              />
+                              <Input value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} className="flex-1" />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Gradient Color 2</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                type="color"
+                                value={gradientColor2}
+                                onChange={(e) => setGradientColor2(e.target.value)}
+                                className="h-10 w-20 cursor-pointer"
+                              />
+                              <Input value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} className="flex-1" />
+                            </div>
+                          </div>
+                          {/* Gradient Angle */}
+                          <div className="space-y-2">
+                            <Label>Gradient Angle: {gradientAngle}°</Label>
+                            <Slider
+                              value={[gradientAngle]}
+                              onValueChange={(value) => setGradientAngle(value[0])}
+                              min={0}
+                              max={360}
+                              step={15}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        /* Solid Background Color */
+                        <div className="space-y-2">
+                          <Label>Background Color</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              value={textBgColor}
+                              onChange={(e) => setTextBgColor(e.target.value)}
+                              className="h-10 w-20 cursor-pointer"
+                            />
+                            <Input value={textBgColor} onChange={(e) => setTextBgColor(e.target.value)} className="flex-1" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Background Opacity */}
+                      <div className="space-y-2">
+                        <Label>Opacity: {Math.round(textBgOpacity * 100)}%</Label>
+                        <Slider
+                          value={[textBgOpacity]}
+                          onValueChange={(value) => setTextBgOpacity(value[0])}
+                          min={0}
+                          max={1}
+                          step={0.05}
+                        />
+                      </div>
+
+                      {/* Blur Effect */}
+                      <div className="space-y-2">
+                        <Label>Blur Amount: {blurAmount}px</Label>
+                        <Slider
+                          value={[blurAmount]}
+                          onValueChange={(value) => setBlurAmount(value[0])}
+                          min={0}
+                          max={20}
+                          step={1}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Glass-morphism blur effect
+                        </p>
+                      </div>
+
+                      {/* Padding Control */}
+                      <div className="space-y-2">
+                        <Label>Padding: {bgPadding.toFixed(1)}x</Label>
+                        <Slider
+                          value={[bgPadding]}
+                          onValueChange={(value) => setBgPadding(value[0])}
+                          min={0.1}
+                          max={1}
+                          step={0.1}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Space between text and background edge
+                        </p>
+                      </div>
+
+                      {/* Border */}
+                      <div className="space-y-2">
+                        <Label>Border Width: {borderWidth}px</Label>
+                        <Slider
+                          value={[borderWidth]}
+                          onValueChange={(value) => setBorderWidth(value[0])}
+                          min={0}
+                          max={10}
+                          step={1}
+                        />
+                      </div>
+
+                      {borderWidth > 0 && (
+                        <div className="space-y-2">
+                          <Label>Border Color</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="color"
+                              value={borderColor}
+                              onChange={(e) => setBorderColor(e.target.value)}
+                              className="h-10 w-20 cursor-pointer"
+                            />
+                            <Input value={borderColor} onChange={(e) => setBorderColor(e.target.value)} className="flex-1" />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Image Filters Section */}
+              <AccordionItem value="filters">
+                <AccordionTrigger className="text-sm font-semibold">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Image Filters
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="space-y-4 pt-4">
+                  {/* Brightness */}
+                  <div className="space-y-2">
+                    <Label>Brightness: {brightness}%</Label>
+                    <Slider
+                      value={[brightness]}
+                      onValueChange={(value) => setBrightness(value[0])}
+                      min={0}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+
+                  {/* Contrast */}
+                  <div className="space-y-2">
+                    <Label>Contrast: {contrast}%</Label>
+                    <Slider
+                      value={[contrast]}
+                      onValueChange={(value) => setContrast(value[0])}
+                      min={0}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+
+                  {/* Saturation */}
+                  <div className="space-y-2">
+                    <Label>Saturation: {saturation}%</Label>
+                    <Slider
+                      value={[saturation]}
+                      onValueChange={(value) => setSaturation(value[0])}
+                      min={0}
+                      max={200}
+                      step={5}
+                    />
+                  </div>
+
+                  {/* Grayscale */}
+                  <div className="space-y-2">
+                    <Label>Grayscale: {grayscale}%</Label>
+                    <Slider
+                      value={[grayscale]}
+                      onValueChange={(value) => setGrayscale(value[0])}
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+
+                  {/* Sepia */}
+                  <div className="space-y-2">
+                    <Label>Sepia: {sepia}%</Label>
+                    <Slider
+                      value={[sepia]}
+                      onValueChange={(value) => setSepia(value[0])}
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+
+                  {/* Reset Filters */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setBrightness(100)
+                      setContrast(100)
+                      setSaturation(100)
+                      setGrayscale(0)
+                      setSepia(0)
+                    }}
+                    className="w-full"
+                  >
+                    Reset All Filters
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
+
+            </Accordion>
+
+            <Separator className="my-6" />
+
+            {/* Canvas Background Color */}
+            <div className="space-y-2">
+              <Label>Canvas Background Color</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="color"
+                  value={bgColor}
+                  onChange={(e) => setBgColor(e.target.value)}
+                  className="h-10 w-20 cursor-pointer"
+                />
+                <Input value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="flex-1" />
+              </div>
+            </div>
+
+            {/* Export Settings */}
+            <div className="space-y-2 border-t border-border pt-6">
+              <h3 className="font-semibold">Export Settings</h3>
+              <Label>Format</Label>
+              <Select value={exportFormat} onValueChange={(value: "png" | "jpeg" | "webp" | "bmp") => setExportFormat(value)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="horizontal">Side by Side</SelectItem>
-                  <SelectItem value="vertical">Top and Bottom</SelectItem>
+                  <SelectItem value="png">PNG - Lossless, best quality</SelectItem>
+                  <SelectItem value="jpeg">JPEG - Smaller file, good for photos</SelectItem>
+                  <SelectItem value="webp">WebP - Modern, best compression</SelectItem>
+                  <SelectItem value="bmp">BMP - Uncompressed, largest file</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="mb-1 flex items-center gap-2">
-              <Label htmlFor="show-labels-text" className="cursor-pointer whitespace-nowrap text-xs text-muted-foreground">
-                Show Before/After Texts
-              </Label>
-              <Switch
-                id="show-labels-text"
-                checked={showLabelsText}
-                onCheckedChange={setShowLabelsText}
-              />
-            </div>
-          </div>
-
-          <Separator className="my-6" />
-
-          <Accordion type="single" defaultValue="typography" collapsible className="w-full">
-            
-            {/* Labels Section */}
-            <AccordionItem value="labels">
-              <AccordionTrigger className="text-sm font-semibold hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <Type className="h-4 w-4 text-primary" />
-                  </div>
-                  <span>Labels & Text</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 pt-4">
-                {/* Before Text */}
-                <div className="space-y-2">
-                  <Label>Before Label</Label>
-                  <Input value={beforeText} onChange={(e) => setBeforeText(e.target.value)} placeholder="Before" />
-                  <Input 
-                    value={beforeSubtext} 
-                    onChange={(e) => setBeforeSubtext(e.target.value)} 
-                    placeholder="Subheading (optional - e.g., date/time)" 
-                    className="text-sm"
-                  />
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBeforeSubtext(new Date().toLocaleDateString())}
-                      className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
-                    >
-                      Add Date
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBeforeSubtext(new Date().toLocaleTimeString())}
-                      className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
-                    >
-                      Add Time
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBeforeSubtext(new Date().toLocaleString())}
-                      className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
-                    >
-                      Both
-                    </Button>
-                  </div>
-                </div>
-
-                {/* After Text */}
-                <div className="space-y-2">
-                  <Label>After Label</Label>
-                  <Input value={afterText} onChange={(e) => setAfterText(e.target.value)} placeholder="After" />
-                  <Input 
-                    value={afterSubtext} 
-                    onChange={(e) => setAfterSubtext(e.target.value)} 
-                    placeholder="Subheading (optional - e.g., date/time)" 
-                    className="text-sm"
-                  />
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAfterSubtext(new Date().toLocaleDateString())}
-                      className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
-                    >
-                      Add Date
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAfterSubtext(new Date().toLocaleTimeString())}
-                      className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
-                    >
-                      Add Time
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAfterSubtext(new Date().toLocaleString())}
-                      className="text-xs flex-1 rounded-full opacity-90 hover:opacity-100"
-                    >
-                      Both
-                    </Button>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Typography Section */}
-            <AccordionItem value="typography">
-              <AccordionTrigger className="text-sm font-semibold hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <Type className="h-4 w-4 text-primary" />
-                  </div>
-                  <span>Typography</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-6 pt-4">
-                {/* Font Family */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Font Family</Label>
-                    <span className="text-xs text-muted-foreground">{fontFamily}</span>
-                  </div>
-                  <Select value={fontFamily} onValueChange={setFontFamily}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Inter">Inter</SelectItem>
-                      <SelectItem value="Roboto">Roboto</SelectItem>
-                      <SelectItem value="Montserrat">Montserrat</SelectItem>
-                      <SelectItem value="Poppins">Poppins</SelectItem>
-                      <SelectItem value="Open Sans">Open Sans</SelectItem>
-                      <SelectItem value="Lato">Lato</SelectItem>
-                      <SelectItem value="Playfair Display">Playfair Display</SelectItem>
-                      <SelectItem value="Oswald">Oswald</SelectItem>
-                      <SelectItem value="Raleway">Raleway</SelectItem>
-                      <SelectItem value="Arial">Arial</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                {/* Font Size */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Font Size</Label>
-                    <span className="text-sm font-semibold tabular-nums">{fontSize}px</span>
-                  </div>
-                  <Slider 
-                    value={[fontSize]} 
-                    onValueChange={(value) => setFontSize(value[0])} 
-                    min={24} 
-                    max={120} 
-                    step={4}
-                    className="py-2"
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>24px</span>
-                    <span>120px</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Text Styling */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Text Style</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Main Text */}
-                    <div className="space-y-2">
-                      <span className="text-xs text-muted-foreground">Main Text</span>
-                      <div className="flex gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={mainTextBold ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setMainTextBold(!mainTextBold)}
-                              className="flex-1 h-9"
-                            >
-                              <Bold className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Bold</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={mainTextItalic ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setMainTextItalic(!mainTextItalic)}
-                              className="flex-1 h-9"
-                            >
-                              <Italic className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Italic</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                    {/* Subtext */}
-                    <div className="space-y-2">
-                      <span className="text-xs text-muted-foreground">Subtext</span>
-                      <div className="flex gap-2">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={subtextBold ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setSubtextBold(!subtextBold)}
-                              className="flex-1 h-9"
-                            >
-                              <Bold className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Bold</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              type="button"
-                              variant={subtextItalic ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setSubtextItalic(!subtextItalic)}
-                              className="flex-1 h-9"
-                            >
-                              <Italic className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Italic</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Text Color */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Text Color</Label>
-                    <span className="text-xs font-mono text-muted-foreground uppercase">{textColor}</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="relative">
-                          <Input
-                            type="color"
-                            value={textColor}
-                            onChange={(e) => setTextColor(e.target.value)}
-                            className="h-11 w-14 cursor-pointer border-2 p-1"
-                          />
-                          <Pipette className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Pick a color</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Input 
-                      value={textColor} 
-                      onChange={(e) => setTextColor(e.target.value)} 
-                      className="flex-1 h-11 font-mono text-sm" 
-                      placeholder="#000000"
-                    />
-                  </div>
-                  {/* Color Presets */}
-                  <div className="grid grid-cols-6 gap-2">
-                    {['#ffffff', '#000000', '#ef4444', '#3b82f6', '#10b981', '#f59e0b'].map((color) => (
-                      <Tooltip key={color}>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => setTextColor(color)}
-                            className="h-9 rounded-lg border-2 transition-all hover:scale-110 hover:border-primary"
-                            style={{ backgroundColor: color }}
-                            aria-label={`Set color to ${color}`}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="font-mono text-xs">{color}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Text Position */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Text Position</Label>
-                  <div className="grid grid-cols-3 gap-2 rounded-lg bg-secondary/50 p-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "top-left" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("top-left")}
-                          className="h-12"
-                        >
-                          <ArrowUpLeft className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Top Left</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "top-center" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("top-center")}
-                          className="h-12"
-                        >
-                          <ArrowUp className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Top Center</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "top-right" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("top-right")}
-                          className="h-12"
-                        >
-                          <ArrowUpRight className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Top Right</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "center-left" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("center-left")}
-                          className="h-12"
-                        >
-                          <ArrowLeftIcon className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Center Left</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "center" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("center")}
-                          className="h-12"
-                        >
-                          <Dot className="h-6 w-6" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Center</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "center-right" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("center-right")}
-                          className="h-12"
-                        >
-                          <ArrowRightIcon className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Center Right</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "bottom-left" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("bottom-left")}
-                          className="h-12"
-                        >
-                          <ArrowDownLeft className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Bottom Left</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "bottom-center" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("bottom-center")}
-                          className="h-12"
-                        >
-                          <ArrowDown className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Bottom Center</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={textPosition === "bottom-right" ? "default" : "ghost"}
-                          size="sm"
-                          onClick={() => setTextPosition("bottom-right")}
-                          className="h-12"
-                        >
-                          <ArrowDownRight className="h-5 w-5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Bottom Right</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Background Effects Section */}
-            <AccordionItem value="background">
-              <AccordionTrigger className="text-sm font-semibold hover:no-underline">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <Palette className="h-4 w-4 text-primary" />
-                  </div>
-                  <span>Background Effects</span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 pt-4">
-                {/* Show Background Toggle */}
-                <div className="flex items-center justify-between space-x-2">
-                  <Label htmlFor="show-background" className="cursor-pointer">Show Text Background</Label>
-                  <Switch 
-                    id="show-background"
-                    checked={showTextBackground} 
-                    onCheckedChange={setShowTextBackground}
-                  />
-                </div>
-
-                {showTextBackground && (
-                  <>
-                    {/* Background Shape */}
-                    <div className="space-y-2">
-                      <Label>Background Shape</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          type="button"
-                          variant={bgShape === "rounded" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setBgShape("rounded")}
-                        >
-                          Rounded
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={bgShape === "pill" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setBgShape("pill")}
-                        >
-                          Pill
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={bgShape === "circle" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setBgShape("circle")}
-                        >
-                          Circle
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={bgShape === "hexagon" ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setBgShape("hexagon")}
-                        >
-                          Hexagon
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* Gradient Toggle */}
-                    <div className="flex items-center justify-between space-x-2">
-                      <Label htmlFor="use-gradient" className="cursor-pointer">Use Gradient</Label>
-                      <Switch 
-                        id="use-gradient"
-                        checked={useGradient} 
-                        onCheckedChange={setUseGradient}
-                      />
-                    </div>
-
-                    {useGradient ? (
-                      <>
-                        {/* Gradient Colors */}
-                        <div className="space-y-2">
-                          <Label>Gradient Color 1</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="color"
-                              value={gradientColor1}
-                              onChange={(e) => setGradientColor1(e.target.value)}
-                              className="h-10 w-20 cursor-pointer"
-                            />
-                            <Input value={gradientColor1} onChange={(e) => setGradientColor1(e.target.value)} className="flex-1" />
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Gradient Color 2</Label>
-                          <div className="flex gap-2">
-                            <Input
-                              type="color"
-                              value={gradientColor2}
-                              onChange={(e) => setGradientColor2(e.target.value)}
-                              className="h-10 w-20 cursor-pointer"
-                            />
-                            <Input value={gradientColor2} onChange={(e) => setGradientColor2(e.target.value)} className="flex-1" />
-                          </div>
-                        </div>
-                        {/* Gradient Angle */}
-                        <div className="space-y-2">
-                          <Label>Gradient Angle: {gradientAngle}°</Label>
-                          <Slider
-                            value={[gradientAngle]}
-                            onValueChange={(value) => setGradientAngle(value[0])}
-                            min={0}
-                            max={360}
-                            step={15}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      /* Solid Background Color */
-                      <div className="space-y-2">
-                        <Label>Background Color</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={textBgColor}
-                            onChange={(e) => setTextBgColor(e.target.value)}
-                            className="h-10 w-20 cursor-pointer"
-                          />
-                          <Input value={textBgColor} onChange={(e) => setTextBgColor(e.target.value)} className="flex-1" />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Background Opacity */}
-                    <div className="space-y-2">
-                      <Label>Opacity: {Math.round(textBgOpacity * 100)}%</Label>
-                      <Slider
-                        value={[textBgOpacity]}
-                        onValueChange={(value) => setTextBgOpacity(value[0])}
-                        min={0}
-                        max={1}
-                        step={0.05}
-                      />
-                    </div>
-
-                    {/* Blur Effect */}
-                    <div className="space-y-2">
-                      <Label>Blur Amount: {blurAmount}px</Label>
-                      <Slider
-                        value={[blurAmount]}
-                        onValueChange={(value) => setBlurAmount(value[0])}
-                        min={0}
-                        max={20}
-                        step={1}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Glass-morphism blur effect
-                      </p>
-                    </div>
-
-                    {/* Padding Control */}
-                    <div className="space-y-2">
-                      <Label>Padding: {bgPadding.toFixed(1)}x</Label>
-                      <Slider
-                        value={[bgPadding]}
-                        onValueChange={(value) => setBgPadding(value[0])}
-                        min={0.1}
-                        max={1}
-                        step={0.1}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Space between text and background edge
-                      </p>
-                    </div>
-
-                    {/* Border */}
-                    <div className="space-y-2">
-                      <Label>Border Width: {borderWidth}px</Label>
-                      <Slider
-                        value={[borderWidth]}
-                        onValueChange={(value) => setBorderWidth(value[0])}
-                        min={0}
-                        max={10}
-                        step={1}
-                      />
-                    </div>
-
-                    {borderWidth > 0 && (
-                      <div className="space-y-2">
-                        <Label>Border Color</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            type="color"
-                            value={borderColor}
-                            onChange={(e) => setBorderColor(e.target.value)}
-                            className="h-10 w-20 cursor-pointer"
-                          />
-                          <Input value={borderColor} onChange={(e) => setBorderColor(e.target.value)} className="flex-1" />
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Image Filters Section */}
-            <AccordionItem value="filters">
-              <AccordionTrigger className="text-sm font-semibold">
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Image Filters
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 pt-4">
-                {/* Brightness */}
-                <div className="space-y-2">
-                  <Label>Brightness: {brightness}%</Label>
-                  <Slider
-                    value={[brightness]}
-                    onValueChange={(value) => setBrightness(value[0])}
-                    min={0}
-                    max={200}
-                    step={5}
-                  />
-                </div>
-
-                {/* Contrast */}
-                <div className="space-y-2">
-                  <Label>Contrast: {contrast}%</Label>
-                  <Slider
-                    value={[contrast]}
-                    onValueChange={(value) => setContrast(value[0])}
-                    min={0}
-                    max={200}
-                    step={5}
-                  />
-                </div>
-
-                {/* Saturation */}
-                <div className="space-y-2">
-                  <Label>Saturation: {saturation}%</Label>
-                  <Slider
-                    value={[saturation]}
-                    onValueChange={(value) => setSaturation(value[0])}
-                    min={0}
-                    max={200}
-                    step={5}
-                  />
-                </div>
-
-                {/* Grayscale */}
-                <div className="space-y-2">
-                  <Label>Grayscale: {grayscale}%</Label>
-                  <Slider
-                    value={[grayscale]}
-                    onValueChange={(value) => setGrayscale(value[0])}
-                    min={0}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                {/* Sepia */}
-                <div className="space-y-2">
-                  <Label>Sepia: {sepia}%</Label>
-                  <Slider
-                    value={[sepia]}
-                    onValueChange={(value) => setSepia(value[0])}
-                    min={0}
-                    max={100}
-                    step={5}
-                  />
-                </div>
-
-                {/* Reset Filters */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setBrightness(100)
-                    setContrast(100)
-                    setSaturation(100)
-                    setGrayscale(0)
-                    setSepia(0)
-                  }}
-                  className="w-full"
-                >
-                  Reset All Filters
-                </Button>
-              </AccordionContent>
-            </AccordionItem>
-
-          </Accordion>
-
-          <Separator className="my-6" />
-
-          {/* Canvas Background Color */}
-          <div className="space-y-2">
-            <Label>Canvas Background Color</Label>
-            <div className="flex gap-2">
-              <Input
-                type="color"
-                value={bgColor}
-                onChange={(e) => setBgColor(e.target.value)}
-                className="h-10 w-20 cursor-pointer"
-              />
-              <Input value={bgColor} onChange={(e) => setBgColor(e.target.value)} className="flex-1" />
-            </div>
-          </div>
-
-          {/* Export Settings */}
-          <div className="space-y-2 border-t border-border pt-6">
-            <h3 className="font-semibold">Export Settings</h3>
-            <Label>Format</Label>
-            <Select value={exportFormat} onValueChange={(value: "png" | "jpeg" | "webp" | "bmp") => setExportFormat(value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="png">PNG - Lossless, best quality</SelectItem>
-                <SelectItem value="jpeg">JPEG - Smaller file, good for photos</SelectItem>
-                <SelectItem value="webp">WebP - Modern, best compression</SelectItem>
-                <SelectItem value="bmp">BMP - Uncompressed, largest file</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              {exportFormat === "png" && "PNG provides lossless compression with transparency support"}
-              {exportFormat === "jpeg" && "JPEG is ideal for photographs with adjustable quality"}
-              {exportFormat === "webp" && "WebP offers superior compression with quality control"}
-              {exportFormat === "bmp" && "BMP is uncompressed and produces large files"}
-            </p>
-          </div>
-
-          {/* Quality Slider for lossy formats */}
-          {(exportFormat === "jpeg" || exportFormat === "webp") && (
-            <div className="space-y-2">
-              <Label>Quality: {Math.round(quality * 100)}%</Label>
-              <Slider
-                value={[quality]}
-                onValueChange={(value) => setQuality(value[0])}
-                min={0.1}
-                max={1}
-                step={0.05}
-              />
               <p className="text-xs text-muted-foreground">
-                Higher quality = larger file size, better image clarity
+                {exportFormat === "png" && "PNG provides lossless compression with transparency support"}
+                {exportFormat === "jpeg" && "JPEG is ideal for photographs with adjustable quality"}
+                {exportFormat === "webp" && "WebP offers superior compression with quality control"}
+                {exportFormat === "bmp" && "BMP is uncompressed and produces large files"}
               </p>
             </div>
-          )}
+
+            {/* Quality Slider for lossy formats */}
+            {(exportFormat === "jpeg" || exportFormat === "webp") && (
+              <div className="space-y-2">
+                <Label>Quality: {Math.round(quality * 100)}%</Label>
+                <Slider
+                  value={[quality]}
+                  onValueChange={(value) => setQuality(value[0])}
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Higher quality = larger file size, better image clarity
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
         {/* Share Dialog */}
         {shareSlug && imageDataUrl && (
@@ -2195,8 +2204,8 @@ export function CanvasEditor({ beforeImage, afterImage, onBack }: CanvasEditorPr
                   <Copy className="h-4 w-4 flex-shrink-0" />
                   <span className="truncate">Copy Code</span>
                 </Button>
-                <Button 
-                  onClick={() => setEmbedDialogOpen(false)} 
+                <Button
+                  onClick={() => setEmbedDialogOpen(false)}
                   variant="outline"
                   className="sm:w-auto text-sm"
                 >

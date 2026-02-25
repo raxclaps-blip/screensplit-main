@@ -12,7 +12,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Download, ImageUp, Loader2, Type } from "lucide-react"
 import { toast } from "sonner"
 import { authClient } from "@/lib/auth-client"
-import { toImageKitUrl } from "@/lib/imagekit"
+
+const DESIGNER_PLACEHOLDER_LIGHT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" fill="none"><rect width="1200" height="1200" fill="#EAEAEA" rx="3"/><g opacity=".5"><g opacity=".5"><path fill="#FAFAFA" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/><path stroke="#C9C9C9" stroke-width="2.418" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/></g><path stroke="url(#a)" stroke-width="2.418" d="M0-1.209h553.581" transform="scale(1 -1) rotate(45 1163.11 91.165)"/><path stroke="url(#b)" stroke-width="2.418" d="M404.846 598.671h391.726"/><path stroke="url(#c)" stroke-width="2.418" d="M599.5 795.742V404.017"/><path stroke="url(#d)" stroke-width="2.418" d="m795.717 796.597-391.441-391.44"/><path fill="#fff" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/><g clip-path="url(#e)"><path fill="#666" fill-rule="evenodd" d="M616.426 586.58h-31.434v16.176l3.553-3.554.531-.531h9.068l.074-.074 8.463-8.463h2.565l7.18 7.181V586.58Zm-15.715 14.654 3.698 3.699 1.283 1.282-2.565 2.565-1.282-1.283-5.2-5.199h-6.066l-5.514 5.514-.073.073v2.876a2.418 2.418 0 0 0 2.418 2.418h26.598a2.418 2.418 0 0 0 2.418-2.418v-8.317l-8.463-8.463-7.181 7.181-.071.072Zm-19.347 5.442v4.085a6.045 6.045 0 0 0 6.046 6.045h26.598a6.044 6.044 0 0 0 6.045-6.045v-7.108l1.356-1.355-1.282-1.283-.074-.073v-17.989h-38.689v23.43l-.146.146.146.147Z" clip-rule="evenodd"/></g><path stroke="#C9C9C9" stroke-width="2.418" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/></g><defs><linearGradient id="a" x1="554.061" x2="-.48" y1=".083" y2=".087" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="b" x1="796.912" x2="404.507" y1="599.963" y2="599.965" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="c" x1="600.792" x2="600.794" y1="403.677" y2="796.082" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="d" x1="404.85" x2="796.972" y1="403.903" y2="796.02" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><clipPath id="e"><path fill="#fff" d="M581.364 580.535h38.689v38.689h-38.689z"/></clipPath></defs></svg>`
+const DESIGNER_PLACEHOLDER_DARK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200" fill="none"><rect width="1200" height="1200" fill="#0D0D0D" rx="3"/><g opacity=".5"><g opacity=".5"><path fill="#1E1E1E" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/><path stroke="#333333" stroke-width="2.418" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/></g><path stroke="url(#a)" stroke-width="2.418" d="M0-1.209h553.581" transform="scale(1 -1) rotate(45 1163.11 91.165)"/><path stroke="url(#b)" stroke-width="2.418" d="M404.846 598.671h391.726"/><path stroke="url(#c)" stroke-width="2.418" d="M599.5 795.742V404.017"/><path stroke="url(#d)" stroke-width="2.418" d="m795.717 796.597-391.441-391.44"/><path fill="#2C2C2C" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/><g clip-path="url(#e)"><path fill="#FFFFFF" fill-rule="evenodd" d="M616.426 586.58h-31.434v16.176l3.553-3.554.531-.531h9.068l.074-.074 8.463-8.463h2.565l7.18 7.181V586.58Zm-15.715 14.654 3.698 3.699 1.283 1.282-2.565 2.565-1.282-1.283-5.2-5.199h-6.066l-5.514 5.514-.073.073v2.876a2.418 2.418 0 0 0 2.418 2.418h26.598a2.418 2.418 0 0 0 2.418-2.418v-8.317l-8.463-8.463-7.181 7.181-.071.072Zm-19.347 5.442v4.085a6.045 6.045 0 0 0 6.046 6.045h26.598a6.044 6.044 0 0 0 6.045-6.045v-7.108l1.356-1.355-1.282-1.283-.074-.073v-17.989h-38.689v23.43l-.146.146.146.147Z" clip-rule="evenodd"/></g><path stroke="#333333" stroke-width="2.418" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/></g><defs><linearGradient id="a" x1="554.061" x2="-.48" y1=".083" y2=".087" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><linearGradient id="b" x1="796.912" x2="404.507" y1="599.963" y2="599.965" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><linearGradient id="c" x1="600.792" x2="600.794" y1="403.677" y2="796.082" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><linearGradient id="d" x1="404.85" x2="796.972" y1="403.903" y2="796.02" gradientUnits="userSpaceOnUse"><stop stop-color="#333333" stop-opacity="0"/><stop offset=".208" stop-color="#333333"/><stop offset=".792" stop-color="#333333"/><stop offset="1" stop-color="#333333" stop-opacity="0"/></linearGradient><clipPath id="e"><path fill="#2C2C2C" d="M581.364 580.535h38.689v38.689h-38.689z"/></clipPath></defs></svg>`
+const DESIGNER_PLACEHOLDER_LIGHT_SRC = `data:image/svg+xml;utf8,${encodeURIComponent(DESIGNER_PLACEHOLDER_LIGHT_SVG)}`
+const DESIGNER_PLACEHOLDER_DARK_SRC = `data:image/svg+xml;utf8,${encodeURIComponent(DESIGNER_PLACEHOLDER_DARK_SVG)}`
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = text.trim().split(/\s+/)
@@ -180,6 +184,7 @@ const ALLOWED_LOGO_MIME_TYPES = new Set([
   "image/webp",
   "image/svg+xml",
 ])
+const DIRECT_R2_UPLOAD_ENABLED = process.env.NEXT_PUBLIC_R2_DIRECT_UPLOAD !== "false"
 
 export default function DesignerPage() {
   const { data: session } = authClient.useSession()
@@ -192,6 +197,7 @@ export default function DesignerPage() {
   const objectUrlRef = useRef<string | null>(null)
   const [imageElement, setImageElement] = useState<HTMLImageElement | null>(null)
   const [logoUrl, setLogoUrl] = useState("")
+  const [logoAssetVersion, setLogoAssetVersion] = useState(() => Date.now())
   const [logoImageElement, setLogoImageElement] = useState<HTMLImageElement | null>(null)
   const [showHeadline, setShowHeadline] = useState(true)
   const [showSubline, setShowSubline] = useState(true)
@@ -284,12 +290,12 @@ export default function DesignerPage() {
       }
     }
 
-    logo.src = logoUrl
+    logo.src = `/api/user/designer-logo/image?v=${logoAssetVersion}`
 
     return () => {
       isMounted = false
     }
-  }, [logoUrl])
+  }, [logoAssetVersion, logoUrl])
 
   const clearImage = useCallback(() => {
     if (objectUrlRef.current) {
@@ -750,6 +756,7 @@ export default function DesignerPage() {
         if (!isMounted) return
         const savedLogoUrl = typeof data.logoUrl === "string" ? data.logoUrl : ""
         setLogoUrl(savedLogoUrl)
+        setLogoAssetVersion(Date.now())
         setShowLogo(Boolean(savedLogoUrl))
       } catch (error) {
         if (isMounted) {
@@ -869,21 +876,6 @@ export default function DesignerPage() {
     }
   }, [bottomRightText, isDesignerTextSaving])
 
-  const readFileAsDataUrl = useCallback((file: File) => {
-    return new Promise<string>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result !== "string") {
-          reject(new Error("Failed to process the selected image"))
-          return
-        }
-        resolve(reader.result)
-      }
-      reader.onerror = () => reject(new Error("Failed to read the selected image"))
-      reader.readAsDataURL(file)
-    })
-  }, [])
-
   const handleLogoFileInput = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ""
@@ -900,24 +892,101 @@ export default function DesignerPage() {
 
     setIsLogoUploading(true)
     try {
-      const logoDataUrl = await readFileAsDataUrl(file)
-      const response = await fetch("/api/user/designer-logo", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          logoDataUrl,
-        }),
-      })
+      const fileNameParts = file.name.split(".")
+      const rawExtension = fileNameParts[fileNameParts.length - 1]?.trim().toLowerCase() || "png"
+      const fileExtension = rawExtension === "jpeg" ? "jpg" : rawExtension
+      const contentType = file.type?.toLowerCase() || "image/png"
 
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to save logo")
+      let savedLogoUrl = ""
+      let pendingObjectUrl = ""
+
+      try {
+        if (!DIRECT_R2_UPLOAD_ENABLED) {
+          throw new Error("Direct upload disabled")
+        }
+
+        const presignResponse = await fetch("/api/user/designer-logo/presign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileExtension,
+            contentType,
+          }),
+        })
+
+        const presignData = await presignResponse.json().catch(() => ({}))
+        if (!presignResponse.ok) {
+          throw new Error(
+            typeof presignData?.error === "string"
+              ? presignData.error
+              : "Failed to initialize logo upload"
+          )
+        }
+
+        const uploadUrl = typeof presignData?.uploadUrl === "string" ? presignData.uploadUrl : ""
+        pendingObjectUrl = typeof presignData?.objectUrl === "string" ? presignData.objectUrl : ""
+        if (!uploadUrl || !pendingObjectUrl) {
+          throw new Error("Invalid logo upload response")
+        }
+
+        const directUploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": contentType,
+          },
+          body: file,
+        })
+
+        if (!directUploadResponse.ok) {
+          throw new Error(`Direct logo upload failed (${directUploadResponse.status})`)
+        }
+
+        const finalizeResponse = await fetch("/api/user/designer-logo", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            logoUrl: pendingObjectUrl,
+          }),
+        })
+
+        const finalizedData = await finalizeResponse.json().catch(() => ({}))
+        if (!finalizeResponse.ok) {
+          throw new Error(
+            typeof finalizedData?.error === "string"
+              ? finalizedData.error
+              : "Failed to finalize logo save"
+          )
+        }
+
+        savedLogoUrl = typeof finalizedData.logoUrl === "string" ? finalizedData.logoUrl : ""
+      } catch (fastUploadError) {
+        const fallbackFormData = new FormData()
+        fallbackFormData.append("logo", file, `designer-logo-${Date.now()}.${fileExtension}`)
+
+        const fallbackResponse = await fetch("/api/user/designer-logo", {
+          method: "PATCH",
+          body: fallbackFormData,
+        })
+        const fallbackData = await fallbackResponse.json().catch(() => ({}))
+        if (!fallbackResponse.ok) {
+          const fastErrorMessage =
+            fastUploadError instanceof Error ? fastUploadError.message : "Fast logo upload failed"
+          const fallbackErrorMessage =
+            typeof fallbackData?.error === "string"
+              ? fallbackData.error
+              : "Fallback logo upload failed"
+          throw new Error(`${fastErrorMessage}. ${fallbackErrorMessage}`)
+        }
+
+        savedLogoUrl = typeof fallbackData.logoUrl === "string" ? fallbackData.logoUrl : ""
       }
 
-      const savedLogoUrl = typeof data.logoUrl === "string" ? data.logoUrl : ""
       setLogoUrl(savedLogoUrl)
+      setLogoAssetVersion(Date.now())
       setShowLogo(Boolean(savedLogoUrl))
       toast.success("Logo saved for future designs")
     } catch (error) {
@@ -925,7 +994,7 @@ export default function DesignerPage() {
     } finally {
       setIsLogoUploading(false)
     }
-  }, [readFileAsDataUrl])
+  }, [])
 
   const removeSavedLogo = useCallback(async () => {
     if (isLogoRemoving) return
@@ -1011,49 +1080,151 @@ export default function DesignerPage() {
         throw new Error(`Could not export the design as ${formatOption.label}`)
       }
 
-      const imageDataUrl =
-        typeof formatOption.quality === "number"
-          ? canvas.toDataURL(formatOption.mimeType, formatOption.quality)
-          : canvas.toDataURL(formatOption.mimeType)
-
       const normalizedMimeType = formatOption.mimeType.toLowerCase()
       const normalizedBlobType = blob.type.toLowerCase()
       const requestedNonPngFormat = formatOption.id !== "png"
-      const dataUrlMatchesFormat = imageDataUrl.startsWith(`data:${normalizedMimeType}`)
       const blobMatchesFormat =
         normalizedBlobType.length === 0 || normalizedBlobType === normalizedMimeType
 
-      if (requestedNonPngFormat && (!dataUrlMatchesFormat || !blobMatchesFormat)) {
+      if (requestedNonPngFormat && !blobMatchesFormat) {
         throw new Error(`${formatOption.label} export is not supported by this browser`)
       }
 
       const exportTitle = (showHeadline && headline.trim() ? headline.trim() : "Designer Export").slice(0, 120)
+      const metadataPayload = {
+        title: exportTitle,
+        layout: "horizontal",
+        beforeLabel: "Designer",
+        afterLabel: "Export",
+        exportFormat: formatOption.extension,
+        textColor: useUnifiedTextColor ? allTextColor : headlineTextColor,
+        bgColor: "#000000",
+        isPrivate: false,
+      }
 
-      const response = await fetch("/api/upload-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          imageDataUrl,
-          title: exportTitle,
-          layout: "horizontal",
-          beforeLabel: "Designer",
-          afterLabel: "Export",
-          exportFormat: formatOption.extension,
-          textColor: useUnifiedTextColor ? allTextColor : headlineTextColor,
-          bgColor: "#000000",
-          isPrivate: false,
-        }),
-      })
+      const contentType =
+        normalizedBlobType.startsWith("image/")
+          ? normalizedBlobType
+          : normalizedMimeType
 
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) {
-        throw new Error(
-          typeof data?.error === "string"
-            ? data.error
-            : "Failed to save this export to cloud storage"
-        )
+      let shareSlug: string | null = null
+      let pendingProjectId: string | null = null
+
+      try {
+        if (!DIRECT_R2_UPLOAD_ENABLED) {
+          throw new Error("Direct upload disabled")
+        }
+
+        const presignResponse = await fetch("/api/upload-image/presign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...metadataPayload,
+            fileExtension: formatOption.extension,
+            contentType,
+          }),
+        })
+
+        const presignData = await presignResponse.json().catch(() => ({}))
+        if (!presignResponse.ok) {
+          throw new Error(
+            typeof presignData?.error === "string"
+              ? presignData.error
+              : "Failed to initialize fast upload"
+          )
+        }
+
+        const projectId = typeof presignData?.projectId === "string" ? presignData.projectId : ""
+        const uploadUrl = typeof presignData?.uploadUrl === "string" ? presignData.uploadUrl : ""
+        const createdShareSlug =
+          typeof presignData?.shareSlug === "string" && presignData.shareSlug.length > 0
+            ? presignData.shareSlug
+            : null
+
+        if (!projectId || !uploadUrl) {
+          throw new Error("Invalid fast upload response")
+        }
+
+        pendingProjectId = projectId
+
+        const directUploadResponse = await fetch(uploadUrl, {
+          method: "PUT",
+          headers: {
+            "Content-Type": contentType,
+          },
+          body: blob,
+        })
+
+        if (!directUploadResponse.ok) {
+          throw new Error(`Direct upload failed (${directUploadResponse.status})`)
+        }
+
+        const completeResponse = await fetch("/api/upload-image/complete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ projectId }),
+        })
+
+        const completeData = await completeResponse.json().catch(() => ({}))
+        if (!completeResponse.ok) {
+          throw new Error(
+            typeof completeData?.error === "string"
+              ? completeData.error
+              : "Failed to finalize fast upload"
+          )
+        }
+
+        pendingProjectId = null
+        shareSlug =
+          typeof completeData?.shareSlug === "string" && completeData.shareSlug.length > 0
+            ? completeData.shareSlug
+            : createdShareSlug
+      } catch (fastUploadError) {
+        if (pendingProjectId) {
+          await fetch("/api/upload-image/cancel", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ projectId: pendingProjectId }),
+          }).catch(() => null)
+        }
+
+        const formData = new FormData()
+        formData.append("image", blob, `designer-output-${Date.now()}.${formatOption.extension}`)
+        formData.append("title", metadataPayload.title)
+        formData.append("layout", metadataPayload.layout)
+        formData.append("beforeLabel", metadataPayload.beforeLabel)
+        formData.append("afterLabel", metadataPayload.afterLabel)
+        formData.append("exportFormat", metadataPayload.exportFormat)
+        formData.append("textColor", metadataPayload.textColor)
+        formData.append("bgColor", metadataPayload.bgColor)
+        formData.append("isPrivate", "false")
+
+        const fallbackResponse = await fetch("/api/upload-image", {
+          method: "POST",
+          body: formData,
+        })
+
+        const fallbackData = await fallbackResponse.json().catch(() => ({}))
+        if (!fallbackResponse.ok) {
+          const fastMessage =
+            fastUploadError instanceof Error ? fastUploadError.message : "Fast upload failed"
+          const fallbackMessage =
+            typeof fallbackData?.error === "string"
+              ? fallbackData.error
+              : "Fallback upload failed"
+          throw new Error(`${fastMessage}. ${fallbackMessage}`)
+        }
+
+        shareSlug =
+          typeof fallbackData?.shareSlug === "string" && fallbackData.shareSlug.length > 0
+            ? fallbackData.shareSlug
+            : null
       }
 
       const url = URL.createObjectURL(blob)
@@ -1066,8 +1237,8 @@ export default function DesignerPage() {
       toast.success(`Exported as ${formatOption.label} and saved to cloud`, {
         id: toastId,
         description:
-          typeof data?.shareSlug === "string" && data.shareSlug.length > 0
-            ? `Saved to Gallery. Share URL: /share/${data.shareSlug}`
+          shareSlug
+            ? `Saved to Gallery. Share URL: /share/${shareSlug}`
             : `Saved to Gallery and downloaded as ${formatOption.label}.`,
       })
     } catch (error) {
@@ -1079,8 +1250,8 @@ export default function DesignerPage() {
   }, [allTextColor, headline, headlineTextColor, isExporting, showHeadline, useUnifiedTextColor])
 
   return (
-    <div className="w-full px-4 pt-10 pb-28 sm:px-6 lg:px-8 xl:pb-10">
-      <div className="grid gap-6">
+    <div className="w-full px-4 pt-10 pb-28 sm:px-6 lg:px-8 xl:h-[calc(100vh-4rem)] xl:overflow-hidden xl:pb-6 xl:pt-6">
+      <div className="grid gap-6 xl:h-full">
         <Card className="order-2 h-fit space-y-2.5 p-3 xl:fixed xl:right-0 xl:top-16 xl:z-20 xl:h-[calc(100vh-4rem)] xl:w-[360px] xl:overflow-y-auto xl:rounded-none xl:border-l xl:border-r-0 xl:border-t-0 xl:border-b-0 xl:bg-card [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <div className="rounded-xl border border-border bg-muted/20 p-3">
             <div className="mb-2">
@@ -1285,7 +1456,11 @@ export default function DesignerPage() {
             </div>
             {logoUrl ? (
               <div className="mt-2 rounded-lg border border-border/60 bg-background/70 p-2">
-                <img src={toImageKitUrl(logoUrl)} alt="Saved logo preview" className="h-12 w-auto max-w-full object-contain" />
+                <img
+                  src={`/api/user/designer-logo/image?v=${logoAssetVersion}`}
+                  alt="Saved logo preview"
+                  className="h-12 w-auto max-w-full object-contain"
+                />
               </div>
             ) : (
               <p className="mt-2 text-xs text-muted-foreground">No saved logo yet.</p>
@@ -1567,7 +1742,7 @@ export default function DesignerPage() {
         </Card>
 
         <div
-          className="group relative order-1 overflow-auto cursor-pointer xl:mr-[384px]"
+          className="group relative order-1 overflow-auto cursor-pointer xl:mr-[384px] xl:h-full xl:min-h-0 xl:overflow-hidden"
           onClick={() => fileInputRef.current?.click()}
           onDrop={handleDrop}
           onDragOver={(event) => event.preventDefault()}
@@ -1593,18 +1768,35 @@ export default function DesignerPage() {
           </div>
           {!imageElement && (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
-              <div className="rounded-xl border border-dashed border-border/80 bg-card/70 px-5 py-4 text-center shadow-sm backdrop-blur-sm">
-                <div className="mb-2 flex items-center justify-center">
-                  <ImageUp className="h-5 w-5 text-muted-foreground" />
+              <div className="relative h-full w-full overflow-hidden rounded-xl border border-dashed border-border/80 bg-card/70 shadow-sm backdrop-blur-sm">
+                <img
+                  src={DESIGNER_PLACEHOLDER_LIGHT_SRC}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full object-cover dark:hidden"
+                />
+                <img
+                  src={DESIGNER_PLACEHOLDER_DARK_SRC}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 hidden h-full w-full object-cover dark:block"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/35 to-background/20" />
+                <div className="relative z-10 flex h-full items-center justify-center px-5 py-4 text-center">
+                  <div>
+                    <div className="mb-2 flex items-center justify-center">
+                      <ImageUp className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium">Click anywhere to upload</p>
+                    <p className="text-xs text-muted-foreground">or drag and drop an image</p>
+                  </div>
                 </div>
-                <p className="text-sm font-medium">Click anywhere to upload</p>
-                <p className="text-xs text-muted-foreground">or drag and drop an image</p>
               </div>
             </div>
           )}
           <canvas
             ref={canvasRef}
-            className="mx-auto h-auto w-full rounded-xl border border-border bg-card p-3 shadow-2xl"
+            className="mx-auto h-auto w-full max-w-full rounded-xl border border-border bg-card p-3 shadow-2xl xl:h-auto xl:w-auto xl:max-h-full xl:max-w-full"
           />
         </div>
       </div>

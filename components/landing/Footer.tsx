@@ -11,6 +11,7 @@ export function Footer() {
         product: [
             { name: "Home", href: "/" },
             { name: "How It Works", href: "#how-it-works" },
+            { name: "Community Gallery", href: "/community" },
         ],
         company: [
             { name: "About", href: "/about" },

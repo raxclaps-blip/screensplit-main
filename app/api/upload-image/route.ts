@@ -3,7 +3,6 @@ import { uploadToR2 } from "@/lib/r2"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { nanoid } from "nanoid"
-import bcrypt from "bcrypt"
 import { uploadRateLimiter, checkRateLimit } from "@/lib/redis"
 import { revalidateTag } from "next/cache"
 
@@ -144,6 +143,7 @@ export async function POST(req: NextRequest) {
     let hashedPassword = null
     if (password) {
       const saltRounds = Number.parseInt(process.env.BCRYPT_COST || "12")
+      const { default: bcrypt } = await import("bcrypt")
       hashedPassword = await bcrypt.hash(password, saltRounds)
     }
 
@@ -167,6 +167,7 @@ export async function POST(req: NextRequest) {
         bgColor: bgColor || "#000000",
         exportFormat: (exportFormat === "jpg" || exportFormat === "jpeg") ? "JPEG" : "PNG",
         isPrivate: isPrivate || false,
+        isPublic: !isPrivate,
         password: hashedPassword,
         viewCount: 0,
       },

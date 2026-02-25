@@ -8,7 +8,13 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
+    let session: Awaited<ReturnType<typeof auth>> | null = null
+    try {
+      session = await auth(req)
+    } catch (authError) {
+      console.error("Gallery delete auth error:", authError)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
     if (!session?.user?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -43,6 +49,7 @@ export async function DELETE(
 
     // Invalidate cached user images listing
     revalidateTag(`user-images:${project.userId}`, { expire: 0 })
+    revalidateTag("community-featured", { expire: 0 })
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -11,7 +11,8 @@ import {
   ImageIcon,
   Download,
   Share2,
-  Loader2
+  Loader2,
+  MoreHorizontal,
 } from "lucide-react"
 import { toast } from "sonner"
 import { ShareDialog } from "@/components/screensplit/share-dialog"
@@ -19,6 +20,12 @@ import { GalleryCard } from "@/components/gallery/gallery-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { toImageKitUrl } from "@/lib/imagekit"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   Dialog,
   DialogContent,
@@ -47,6 +54,7 @@ interface Project {
   shareMessage?: string
   isPrivate: boolean
   isPublic: boolean
+  isFeaturedInCommunity?: boolean
   viewCount: number
   createdAt: string
   updatedAt: string
@@ -57,7 +65,7 @@ interface Project {
 
 export default function GalleryPage() {
   const PAGE_SIZE = 12
-  const CACHE_KEY = "gallery_cache_v2"
+  const CACHE_KEY = "gallery_cache_v3"
   const CACHE_TTL_MS = 2 * 60 * 1000
   const [projects, setProjects] = useState<Project[]>([])
   const [refreshing, setRefreshing] = useState(false)
@@ -108,7 +116,26 @@ export default function GalleryPage() {
         setUnauthorized(true)
         setProjects([])
       } else {
-        toast.error('Failed to load gallery')
+        const rawBody = await response.text().catch(() => "")
+        let errorData: Record<string, any> | null = null
+        if (rawBody) {
+          try {
+            errorData = JSON.parse(rawBody)
+          } catch {
+            errorData = null
+          }
+        }
+        const errorMessage =
+          (typeof errorData?.details?.message === "string" && errorData.details.message) ||
+          (typeof errorData?.error === "string" && errorData.error) ||
+          `Failed to load gallery (${response.status})`
+        console.error("Gallery API error:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          rawBody: errorData ? null : rawBody.slice(0, 300),
+        })
+        toast.error(errorMessage)
       }
     } catch (error: any) {
       if (error?.name !== 'AbortError') {
@@ -400,18 +427,18 @@ export default function GalleryPage() {
             setPreviewProject(null)
           }
         }}>
-          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-4 sm:p-6 rounded-3xl border-muted/50 shadow-2xl">
-            <DialogHeader className="mb-4">
-              <div className="flex items-center justify-between gap-4">
+          <DialogContent className="flex max-h-[calc(100svh-1rem)] w-[calc(100vw-1rem)] max-w-6xl flex-col overflow-hidden rounded-2xl border-muted/50 p-3 shadow-2xl sm:max-h-[95vh] sm:rounded-3xl sm:p-6">
+            <DialogHeader className="mb-3 sm:mb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <DialogTitle className="text-2xl font-bold truncate">
+                  <DialogTitle className="truncate text-lg font-bold sm:text-2xl">
                     {previewProject.title || 'Untitled Comparison'}
                   </DialogTitle>
-                  <DialogDescription className="text-base">
+                  <DialogDescription className="text-sm sm:text-base">
                     {previewProject.beforeLabel} vs {previewProject.afterLabel}
                   </DialogDescription>
                 </div>
-                <div className="flex items-center gap-3 md:hidden">
+                <div className="flex items-center gap-2 self-end sm:self-auto md:hidden">
                   <div className="flex items-center gap-2 bg-secondary/50 px-2 py-1 rounded-full border border-border">
                     <Switch
                       id="sticky-image"
@@ -423,12 +450,50 @@ export default function GalleryPage() {
                       Sticky
                     </Label>
                   </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 border border-border/70 bg-background/80 shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onClick={() => copyShareLink(previewProject)}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadImage(previewProject)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="hidden md:flex">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 border border-border/70 bg-background/80 shrink-0">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem onClick={() => copyShareLink(previewProject)}>
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => downloadImage(previewProject)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </DialogHeader>
 
             <div className={cn(
-              "relative flex-1 rounded-2xl overflow-hidden bg-muted/30 border border-muted/50 group shadow-inner min-h-[300px]",
+              "relative flex-1 rounded-2xl overflow-hidden bg-muted/30 border border-muted/50 group shadow-inner min-h-[220px] sm:min-h-[300px]",
               stickyImage ? 'md:relative sticky top-0 z-50' : ''
             )}>
               {/* Skeleton/Loader */}
@@ -455,14 +520,14 @@ export default function GalleryPage() {
               />
             </div>
 
-            <DialogFooter className="mt-6 flex-col sm:flex-row gap-3 pt-4 border-t border-muted/30">
-              <div className="flex gap-3 w-full sm:w-auto">
+            <DialogFooter className="mt-4 flex-col gap-3 border-t border-muted/30 pt-3 pb-[max(env(safe-area-inset-bottom),0.25rem)] sm:mt-6 sm:flex-row sm:pt-4">
+              <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:gap-3">
                 <Button
                   variant="secondary"
                   onClick={() => {
                     copyShareLink(previewProject)
                   }}
-                  className="flex-1 sm:flex-none rounded-full px-6 transition-all hover:bg-secondary/80 border-border"
+                  className="w-full sm:flex-none rounded-full px-4 sm:px-6 transition-all hover:bg-secondary/80 border-border"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Copy Link
@@ -472,7 +537,7 @@ export default function GalleryPage() {
                   onClick={() => {
                     downloadImage(previewProject)
                   }}
-                  className="flex-1 sm:flex-none rounded-full px-6 transition-all hover:bg-secondary/80 border-border"
+                  className="w-full sm:flex-none rounded-full px-4 sm:px-6 transition-all hover:bg-secondary/80 border-border"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download
@@ -480,7 +545,7 @@ export default function GalleryPage() {
               </div>
               <Button
                 onClick={() => setImagePreviewOpen(false)}
-                className="rounded-full px-8 shadow-lg shadow-primary/10"
+                className="w-full rounded-full px-8 shadow-lg shadow-primary/10 sm:w-auto"
               >
                 Close
               </Button>
@@ -531,6 +596,7 @@ export default function GalleryPage() {
           slug={selectedProject.shareSlug!}
           initialIsPrivate={selectedProject.isPrivate}
           initialMessage={selectedProject.shareMessage || ""}
+          initialFeaturedInCommunity={Boolean(selectedProject.isFeaturedInCommunity)}
         />
       )}
     </div>

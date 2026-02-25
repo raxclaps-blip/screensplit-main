@@ -15,7 +15,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { slug, isPrivate, password, message } = body
+    const slug = typeof body?.slug === "string" ? body.slug : ""
+    const isPrivate = Boolean(body?.isPrivate)
+    const password = typeof body?.password === "string" ? body.password : ""
+    const message = typeof body?.message === "string" ? body.message : ""
+    const requestedFeatureInCommunity = Boolean(body?.featureInCommunity)
+    const isFeaturedInCommunity = !isPrivate && requestedFeatureInCommunity
 
     if (!slug) {
       return NextResponse.json(
@@ -63,13 +68,16 @@ export async function POST(req: NextRequest) {
       where: { shareSlug: slug },
       data: {
         isPrivate,
+        isPublic: !isPrivate,
         password: hashedPassword,
         shareMessage: message || null,
+        isFeaturedInCommunity,
       },
       select: {
         isPrivate: true,
         shareSlug: true,
         shareMessage: true,
+        isFeaturedInCommunity: true,
       },
     })
 
@@ -80,11 +88,13 @@ export async function POST(req: NextRequest) {
     if (session.user.id) {
       revalidateTag(`user-images:${session.user.id}`, { expire: 0 })
     }
+    revalidateTag("community-featured", { expire: 0 })
 
     return NextResponse.json({
       success: true,
       isPrivate: updated.isPrivate,
       shareMessage: updated.shareMessage,
+      isFeaturedInCommunity: updated.isFeaturedInCommunity,
     })
   } catch (error) {
     console.error("Error updating privacy:", error)

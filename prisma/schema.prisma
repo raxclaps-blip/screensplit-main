@@ -148,6 +148,7 @@ model Project {
   shareSlug   String?  @unique // Unique slug for public sharing
   shareMessage String? // Optional message to display with shared image
   isPrivate   Boolean  @default(false) // If true, requires password
+  isFeaturedInCommunity Boolean @default(false) // Opt-in for public featured/community sections
   password    String?  // Bcrypt hashed password for private shares
   
   // Metadata
@@ -162,6 +163,7 @@ model Project {
 
   @@map("projects")
   @@index([userId, createdAt(sort: Desc)])
+  @@index([isFeaturedInCommunity, isPrivate, createdAt(sort: Desc)])
 }
 
 // Analytics model for tracking usage

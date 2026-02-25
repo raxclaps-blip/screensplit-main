@@ -1,7 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useRef, useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Download, Loader2, Play, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
@@ -63,6 +64,12 @@ export function VideoComposer({
   const [beforeAspect, setBeforeAspect] = useState(9 / 16)
   const [afterAspect, setAfterAspect] = useState(9 / 16)
   const [fadeVisible, setFadeVisible] = useState(false)
+
+  const [headerActionsTarget, setHeaderActionsTarget] = useState<HTMLElement | null>(null)
+
+  useEffect(() => {
+    setHeaderActionsTarget(document.getElementById("header-actions"))
+  }, [])
 
   // Play comparison with fade-through-black between clips
   const handlePlayComparison = useCallback(async () => {
@@ -342,10 +349,13 @@ export function VideoComposer({
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 sm:py-6">
-      <Button variant="ghost" onClick={onBack} disabled={isComposing} className="mb-6 gap-2">
-        <ArrowLeft className="h-4 w-4" />
-        Back to Upload
-      </Button>
+      {headerActionsTarget && createPortal(
+        <Button variant="outline" size="sm" onClick={onBack} disabled={isComposing} className="gap-2 rounded-full">
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>,
+        headerActionsTarget
+      )}
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_380px] lg:gap-8">
         <div className="space-y-3">
@@ -604,20 +614,20 @@ function OverlayLabel({ which, controls }: { which: "before" | "after"; controls
         ) : null}
         <div
           style={{
-              position: "relative",
-              zIndex: 1,
-              boxSizing: "border-box",
-              paddingInline: contentInsetX + 2,
-              display: "inline-block",
-              fontSize: controls.fontSize,
-              fontWeight: controls.mainTextBold ? 700 : 400,
-              fontStyle: controls.mainTextItalic ? "italic" : "normal",
-              fontFamily: `${controls.fontFamily}, sans-serif`,
-              lineHeight: 1.1,
-              whiteSpace: "nowrap",
-              textWrap: "nowrap",
-              wordBreak: "normal",
-              overflowWrap: "normal",
+            position: "relative",
+            zIndex: 1,
+            boxSizing: "border-box",
+            paddingInline: contentInsetX + 2,
+            display: "inline-block",
+            fontSize: controls.fontSize,
+            fontWeight: controls.mainTextBold ? 700 : 400,
+            fontStyle: controls.mainTextItalic ? "italic" : "normal",
+            fontFamily: `${controls.fontFamily}, sans-serif`,
+            lineHeight: 1.1,
+            whiteSpace: "nowrap",
+            textWrap: "nowrap",
+            wordBreak: "normal",
+            overflowWrap: "normal",
           }}
         >
           {label}

@@ -3,7 +3,7 @@
 import type React from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { House, LayoutGrid, HelpCircle, Wand2, Menu, X, LogOut, Images, Film, Palette, Settings, User2 } from "lucide-react"
+import { House, LayoutGrid, HelpCircle, Wand2, X, LogOut, Images, Film, Palette, Settings, User2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -28,7 +28,7 @@ const mobilePrimaryNavigation = [
   { name: "Dashboard", href: "/apps/dashboard", icon: House },
   { name: "Screensplit", href: "/apps/screensplit", icon: LayoutGrid },
   { name: "Designer", href: "/apps/designer", icon: Palette, center: true },
-  { name: "Videosplit", href: "/apps/videosplit", icon: Film, beta: true },
+  { name: "Videosplit", href: "/apps/videosplit", icon: Film },
 ]
 
 const iconAccentByRoute: Record<string, string> = {
@@ -321,13 +321,11 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
       <div className="lg:pl-64">
         <div className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold leading-tight">{currentPage.title}</p>
             <p className="truncate text-xs text-muted-foreground leading-tight">{currentPage.subtitle}</p>
           </div>
+          <div id="header-actions" className="flex items-center gap-2 empty:hidden"></div>
         </div>
 
         <main className="min-h-screen pb-[calc(5.8rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
@@ -344,15 +342,15 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
 
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(env(safe-area-inset-bottom),0.5rem)] lg:hidden",
+          "fixed inset-x-0 bottom-0 z-50 lg:hidden",
           sidebarOpen && "hidden",
         )}
       >
-        <div className="relative mx-auto w-full max-w-xl">
+        <div className="relative w-full">
           <div
             id="mobile-account-menu"
             className={cn(
-              "absolute inset-x-0 bottom-[calc(100%+0.6rem)] origin-bottom rounded-2xl border border-border/60 bg-card/96 p-2 shadow-2xl backdrop-blur transition-all duration-250",
+              "absolute inset-x-3 bottom-[calc(100%+0.6rem)] origin-bottom rounded-2xl border border-border/60 bg-card/96 p-2 shadow-2xl backdrop-blur transition-all duration-250",
               mobileAccountOpen
                 ? "translate-y-0 opacity-100 pointer-events-auto"
                 : "translate-y-6 opacity-0 pointer-events-none",
@@ -416,7 +414,7 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
             </div>
           </div>
 
-          <nav className="grid h-[5.15rem] grid-cols-5 items-end rounded-[1.35rem] border border-border/60 bg-background/94 px-2 pb-2 pt-2 shadow-[0_-12px_40px_rgba(0,0,0,0.28)] backdrop-blur supports-[backdrop-filter]:bg-background/82">
+          <nav className="grid h-[5.15rem] grid-cols-5 items-end border-t border-border/60 bg-background/94 px-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] pt-2 shadow-[0_-12px_40px_rgba(0,0,0,0.28)] backdrop-blur supports-[backdrop-filter]:bg-background/82">
             {mobilePrimaryNavigation.map((item) => {
               const Icon = item.icon
               const isActive = isRouteActive(pathname, item.href)
@@ -469,9 +467,6 @@ export function DashboardLayoutClient({ children }: { children: React.ReactNode 
                     <Icon className="h-4 w-4" />
                   </span>
                   <span className="leading-none">{item.name}</span>
-                  {item.beta ? (
-                    <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-500/90">Beta</span>
-                  ) : null}
                 </Link>
               )
             })}
